@@ -1,0 +1,77 @@
+<resources>
+    <string name="app_name">Streak Tracker</string>
+    <string name="widget_today_tasks_name">Today\'s Tasks</string>
+    <string name="widget_today_tasks_description">View and toggle today\'s scheduled tasks and streaks.</string>
+    <string name="widget_streak_summary_name">Streak Summary</string>
+    <string name="widget_streak_summary_description">Quick view of your active streak, best streak, and today\'s completion rate.</string>
+
+    <!-- Navigation & Common -->
+    <string name="nav_habits">Habits</string>
+    <string name="nav_calendar">Calendar</string>
+    <string name="nav_stats">Stats</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_pomodoro">Pomodoro</string>
+
+    <string name="today">Today</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="done">Done</string>
+    <string name="snooze">Snooze</string>
+    <string name="add_task">Add Task</string>
+    <string name="create_task">Create Habit / Task</string>
+    <string name="edit_task">Edit Habit / Task</string>
+
+    <!-- Task Fields -->
+    <string name="task_title">Task Title</string>
+    <string name="task_category">Category</string>
+    <string name="recurrence">Recurrence</string>
+    <string name="daily">Daily</string>
+    <string name="custom_days">Custom Days</string>
+    <string name="once">One-Time</string>
+    <string name="start_date">Start Date</string>
+    <string name="end_date">End Date (Optional)</string>
+    <string name="reminder_time">Reminder Time</string>
+    <string name="task_notes">Notes (Optional, max 500 chars)</string>
+    <string name="subtasks">Subtasks</string>
+    <string name="add_subtask">Add Subtask</string>
+    <string name="complete_when_all_subtasks_done">Complete task when all subtasks are done</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="daily_goal">Daily Goal</string>
+    <string name="theme_appearance">Theme &amp; Appearance</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="color_theme">Color Palette</string>
+    <string name="theme_flame">Flame (Default)</string>
+    <string name="theme_forest">Forest Green</string>
+    <string name="theme_ocean">Ocean Blue</string>
+    <string name="theme_twilight">Twilight Purple</string>
+    <string name="language">Language</string>
+    <string name="lang_system">System Default</string>
+    <string name="lang_en">English</string>
+    <string name="lang_ar">العربية (Arabic)</string>
+    <string name="sound_effects">Sound Effects</string>
+    <string name="haptic_feedback">Haptic Feedback</string>
+    <string name="vacation_mode">Vacation Mode</string>
+    <string name="vacation_mode_desc">Freeze streaks while you take a well-deserved break</string>
+
+    <!-- Backups -->
+    <string name="backup_sync">Backup &amp; Sync</string>
+    <string name="auto_backup_local">Auto Backup to Downloads</string>
+    <string name="google_drive_backup">Google Drive Backup</string>
+    <string name="export_json">Export Data (JSON)</string>
+    <string name="import_json">Import Data (JSON)</string>
+
+    <!-- Pomodoro -->
+    <string name="pomodoro_timer">Pomodoro Focus Timer</string>
+    <string name="pomodoro_work">Work Focus (25m)</string>
+    <string name="pomodoro_break">Short Break (5m)</string>
+    <string name="pomodoro_start">Start Focus</string>
+    <string name="pomodoro_pause">Pause</string>
+    <string name="pomodoro_reset">Reset</string>
+    <string name="pomodoro_completed_sessions">Sessions Completed</string>
+</resources>

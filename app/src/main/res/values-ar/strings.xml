@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">متتبع العادات</string>
+    <string name="widget_today_tasks_name">مهام اليوم</string>
+    <string name="widget_today_tasks_description">عرض وإنجاز مهام اليوم ومتابعة السلسلة.</string>
+    <string name="widget_streak_summary_name">ملخص السلسلة</string>
+    <string name="widget_streak_summary_description">عرض سريع لأطول سلسلة وسلسلتك الحالية ونسبة إنجاز اليوم.</string>
+
+    <!-- Navigation & Common -->
+    <string name="nav_habits">العادات</string>
+    <string name="nav_calendar">التقويم</string>
+    <string name="nav_stats">الإحصائيات</string>
+    <string name="nav_settings">الإعدادات</string>
+    <string name="nav_pomodoro">بومودورو</string>
+
+    <string name="today">اليوم</string>
+    <string name="cancel">إلغاء</string>
+    <string name="save">حفظ</string>
+    <string name="delete">حذف</string>
+    <string name="edit">تعديل</string>
+    <string name="done">تم الإنجاز</string>
+    <string name="snooze">تأجيل</string>
+    <string name="add_task">إضافة مهمة</string>
+    <string name="create_task">إنشاء عادة / مهمة جديدة</string>
+    <string name="edit_task">تعديل العادة / المهمة</string>
+
+    <!-- Task Fields -->
+    <string name="task_title">عنوان المهمة</string>
+    <string name="task_category">التصنيف</string>
+    <string name="recurrence">التكرار</string>
+    <string name="daily">يومي</string>
+    <string name="custom_days">أيام محددة</string>
+    <string name="once">مرة واحدة</string>
+    <string name="start_date">تاريخ البدء</string>
+    <string name="end_date">تاريخ الانتهاء (اختياري)</string>
+    <string name="reminder_time">وقت التذكير</string>
+    <string name="task_notes">ملاحظات (اختياري، بحد أقصى 500 حرف)</string>
+    <string name="subtasks">المهام الفرعية</string>
+    <string name="add_subtask">إضافة مهمة فرعية</string>
+    <string name="complete_when_all_subtasks_done">إكمال المهمة تلقائياً عند انتهاء كل المهام الفرعية</string>
+
+    <!-- Settings -->
+    <string name="settings_title">الإعدادات</string>
+    <string name="daily_goal">الهدف اليومي</string>
+    <string name="theme_appearance">المظهر والمظهر الداكن</string>
+    <string name="theme_system">تلقائي حسب النظام</string>
+    <string name="theme_light">فاتح</string>
+    <string name="theme_dark">داكن</string>
+    <string name="color_theme">لوحة الألوان</string>
+    <string name="theme_flame">الشعلة (الافتراضي)</string>
+    <string name="theme_forest">غابة خضراء</string>
+    <string name="theme_ocean">محيط أزرق</string>
+    <string name="theme_twilight">شفق بنفسجي</string>
+    <string name="language">اللغة</string>
+    <string name="lang_system">لغة الجهاز الافتراضية</string>
+    <string name="lang_en">English</string>
+    <string name="lang_ar">العربية</string>
+    <string name="sound_effects">المؤثرات الصوتية</string>
+    <string name="haptic_feedback">الاهتزاز التفاعلي</string>
+    <string name="vacation_mode">وضع الإجازة</string>
+    <string name="vacation_mode_desc">تجميد السلاسل تلقائياً أثناء أخذ استراحة مستحقة</string>
+
+    <!-- Backups -->
+    <string name="backup_sync">النسخ الاحتياطي والمزامنة</string>
+    <string name="auto_backup_local">نسخ احتياطي تلقائي إلى التنزيلات</string>
+    <string name="google_drive_backup">نسخ احتياطي عبر Google Drive</string>
+    <string name="export_json">تصدير البيانات (JSON)</string>
+    <string name="import_json">استيراد البيانات (JSON)</string>
+
+    <!-- Pomodoro -->
+    <string name="pomodoro_timer">مؤقت بومودورو للتركيز</string>
+    <string name="pomodoro_work">جلسة تركيز (25 دقيقة)</string>
+    <string name="pomodoro_break">استراحة قصيرة (5 دقائق)</string>
+    <string name="pomodoro_start">بدء التركيز</string>
+    <string name="pomodoro_pause">إيقاف مؤقت</string>
+    <string name="pomodoro_reset">إعادة ضبط</string>
+    <string name="pomodoro_completed_sessions">الجلسات المكتملة</string>
+</resources>
