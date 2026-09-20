@@ -26,6 +26,21 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE id = :id")
     suspend fun getTaskByIdDirect(id: Long): TaskEntity?
 
+    @Query("SELECT * FROM tasks WHERE isArchived = 1 ORDER BY createdAt DESC")
+    fun getArchivedTasks(): Flow<List<TaskEntity>>
+
+    @Query("UPDATE tasks SET isArchived = 1 WHERE id = :id")
+    suspend fun archiveTask(id: Long)
+
+    @Query("UPDATE tasks SET isArchived = 0 WHERE id = :id")
+    suspend fun unarchiveTask(id: Long)
+
+    @Query("DELETE FROM tasks WHERE isArchived = 1")
+    suspend fun deleteArchivedTasks()
+
+    @Query("SELECT * FROM tasks WHERE id IN (:ids)")
+    suspend fun getTasksByIds(ids: List<Long>): List<TaskEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(task: TaskEntity): Long
 

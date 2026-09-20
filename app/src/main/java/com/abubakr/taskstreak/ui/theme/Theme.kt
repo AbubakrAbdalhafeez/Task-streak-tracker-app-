@@ -13,7 +13,11 @@ private fun buildColorScheme(isDark: Boolean, palette: String): androidx.compose
         "FOREST" -> Quad(ForestPrimary, ForestPrimaryVariant, ForestSecondary, ForestTertiary)
         "OCEAN" -> Quad(OceanPrimary, OceanPrimaryVariant, OceanSecondary, OceanTertiary)
         "TWILIGHT" -> Quad(TwilightPrimary, TwilightPrimaryVariant, TwilightSecondary, TwilightTertiary)
-        else -> Quad(FlamePrimary, FlamePrimaryVariant, FlameSecondary, SuccessGreen)
+        else -> if (isDark) {
+            Quad(DarkModeRed, DarkModeRedVariant, DarkModeRedSecondary, DarkModeRedTertiary)
+        } else {
+            Quad(LightModeBlue, LightModeBlueVariant, LightModeBlueSecondary, LightModeBlueTertiary)
+        }
     }
 
     return if (isDark) {

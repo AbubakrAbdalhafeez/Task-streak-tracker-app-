@@ -29,6 +29,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.CloudDone
@@ -40,15 +42,20 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Upload
+import com.abubakr.taskstreak.ui.components.QrSyncDialog
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -89,8 +96,6 @@ import coil.compose.AsyncImage
 import com.abubakr.taskstreak.data.drive.DriveSyncState
 import com.abubakr.taskstreak.ui.components.AddCategoryDialog
 import com.abubakr.taskstreak.ui.theme.DangerRed
-import com.abubakr.taskstreak.ui.theme.FlamePrimary
-import com.abubakr.taskstreak.ui.theme.FlameSecondary
 import com.abubakr.taskstreak.ui.theme.InfoBlue
 import com.abubakr.taskstreak.ui.theme.SuccessGreen
 import com.abubakr.taskstreak.ui.viewmodel.StreakViewModel
@@ -103,6 +108,12 @@ import java.util.Locale
 @Composable
 fun SettingsScreen(
     viewModel: StreakViewModel,
+    onNavigateToArchive: (() -> Unit)? = null,
+    onNavigateToCategories: (() -> Unit)? = null,
+    onNavigateToHabitChains: (() -> Unit)? = null,
+    onNavigateToAdvancedBackup: (() -> Unit)? = null,
+    onNavigateToCommunityHub: (() -> Unit)? = null,
+    onReplayOnboarding: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -125,8 +136,13 @@ fun SettingsScreen(
     val hapticsEnabled by viewModel.preferences.hapticsEnabled.collectAsStateWithLifecycle()
     val vacationMode by viewModel.preferences.vacationMode.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val quietHoursEnabled by viewModel.preferences.quietHoursEnabled.collectAsStateWithLifecycle()
+    val quietHoursStart by viewModel.preferences.quietHoursStart.collectAsStateWithLifecycle()
+    val quietHoursEnd by viewModel.preferences.quietHoursEnd.collectAsStateWithLifecycle()
 
     var isBackingUpToDownloads by remember { mutableStateOf(false) }
+    var showQrSyncDialog by remember { mutableStateOf(false) }
+    var qrSyncExportJson by remember { mutableStateOf<String?>(null) }
 
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -174,7 +190,7 @@ fun SettingsScreen(
         item {
             Column {
                 Text(
-                    text = "Settings / الإعدادات",
+                    text = stringResource(R.string.settings_title),
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -200,12 +216,12 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.Default.SettingsBrightness,
                             contentDescription = null,
-                            tint = FlamePrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "Appearance / المظهر",
+                            text = stringResource(R.string.appearance),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -218,9 +234,9 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
-                            Triple("SYSTEM", "System / تلقائي", Icons.Default.SettingsBrightness),
-                            Triple("LIGHT", "Light / فاتح", Icons.Default.LightMode),
-                            Triple("DARK", "Dark / داكن", Icons.Default.DarkMode)
+                            Triple("SYSTEM", stringResource(R.string.theme_system), Icons.Default.SettingsBrightness),
+                            Triple("LIGHT", stringResource(R.string.theme_light), Icons.Default.LightMode),
+                            Triple("DARK", stringResource(R.string.theme_dark), Icons.Default.DarkMode)
                         ).forEach { (mode, label, icon) ->
                             FilterChip(
                                 selected = themeMode == mode,
@@ -230,7 +246,7 @@ fun SettingsScreen(
                                     Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp))
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = FlamePrimary,
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
                                     selectedLabelColor = Color.White
                                 ),
                                 modifier = Modifier.weight(1f)
@@ -241,7 +257,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Accent Color Theme / الألوان",
+                        text = stringResource(R.string.accent_color_theme),
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -252,14 +268,15 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        val isDark = isSystemInDarkTheme() || themeMode == "DARK"
                         listOf(
-                            Triple("FLAME", "Flame 🔥", Color(0xFFFF5722)),
+                            Triple("DEFAULT", stringResource(R.string.theme_flame), if (isDark) DarkModeRed else LightModeBlue),
                             Triple("FOREST", "Forest 🌲", Color(0xFF10B981)),
                             Triple("OCEAN", "Ocean 🌊", Color(0xFF0EA5E9)),
                             Triple("TWILIGHT", "Twilight 🌙", Color(0xFF8B5CF6))
                         ).forEach { (paletteKey, label, color) ->
                             FilterChip(
-                                selected = colorPalette == paletteKey,
+                                selected = colorPalette == paletteKey || (colorPalette == "FLAME" && paletteKey == "DEFAULT"),
                                 onClick = { viewModel.preferences.setColorPalette(paletteKey) },
                                 label = { Text(label, fontSize = 10.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
@@ -274,7 +291,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Language / اللغة",
+                        text = stringResource(R.string.language),
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -286,16 +303,16 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
-                            Pair("SYSTEM", "Auto / تلقائي"),
-                            Pair("en", "English"),
-                            Pair("ar", "العربية")
+                            Pair("SYSTEM", stringResource(R.string.lang_system)),
+                            Pair("en", stringResource(R.string.lang_en)),
+                            Pair("ar", stringResource(R.string.lang_ar))
                         ).forEach { (code, name) ->
                             FilterChip(
                                 selected = appLanguage == code,
                                 onClick = { viewModel.preferences.setAppLanguage(code) },
                                 label = { Text(name, fontSize = 11.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = FlamePrimary,
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
                                     selectedLabelColor = Color.White
                                 ),
                                 modifier = Modifier.weight(1f)
@@ -323,12 +340,12 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "🏖️ Vacation Mode / وضع العطلة",
+                                text = "🏖️ " + stringResource(R.string.vacation_mode),
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Freeze your streaks while travelling or on vacation so you don't lose your progress.",
+                                text = stringResource(R.string.vacation_mode_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -336,7 +353,7 @@ fun SettingsScreen(
                         Switch(
                             checked = vacationMode,
                             onCheckedChange = { viewModel.preferences.setVacationMode(it) },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = FlamePrimary)
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = MaterialTheme.colorScheme.primary)
                         )
                     }
                 }
@@ -354,7 +371,7 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Text(
-                        text = "🔊 Sound & Haptics / الصوت والاهتزاز",
+                        text = "🔊 " + stringResource(R.string.sound_haptics),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -366,11 +383,11 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Sound Effects on completion", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.sound_effects), style = MaterialTheme.typography.bodyMedium)
                         Switch(
                             checked = soundEnabled,
                             onCheckedChange = { viewModel.preferences.setSoundEnabled(it) },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = FlamePrimary)
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = MaterialTheme.colorScheme.primary)
                         )
                     }
 
@@ -381,11 +398,11 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Haptic Vibration", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.haptic_feedback), style = MaterialTheme.typography.bodyMedium)
                         Switch(
                             checked = hapticsEnabled,
                             onCheckedChange = { viewModel.preferences.setHapticsEnabled(it) },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = FlamePrimary)
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = MaterialTheme.colorScheme.primary)
                         )
                     }
                 }
@@ -406,12 +423,12 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.Default.Notifications,
                             contentDescription = null,
-                            tint = FlameSecondary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "Reminders / التنبيهات والإشعارات",
+                            text = stringResource(R.string.reminders_title),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -440,7 +457,7 @@ fun SettingsScreen(
                         Switch(
                             checked = morningReminderEnabled,
                             onCheckedChange = { viewModel.setMorningReminderEnabled(it) },
-                            colors = SwitchDefaults.colors(checkedThumbColor = FlamePrimary)
+                            colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
                         )
                     }
 
@@ -458,7 +475,7 @@ fun SettingsScreen(
                                     onClick = { viewModel.setMorningReminderTime(time) },
                                     label = { Text(time) },
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = FlamePrimary,
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
                                         selectedLabelColor = Color.White
                                     )
                                 )
@@ -481,7 +498,7 @@ fun SettingsScreen(
                             Switch(
                                 checked = reminderOnlyIfPending,
                                 onCheckedChange = { viewModel.setReminderOnlyIfPending(it) },
-                                colors = SwitchDefaults.colors(checkedThumbColor = FlamePrimary)
+                                colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
                             )
                         }
                     }
@@ -502,11 +519,72 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.Default.NotificationsActive,
                             contentDescription = null,
-                            tint = FlamePrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Send Test Notification / تجربة إشعار", color = FlamePrimary)
+                        Text(stringResource(R.string.send_test_notification), color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Quiet Hours Feature (Feature 19)
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.quiet_hours),
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Mute reminder alerts between $quietHoursStart and $quietHoursEnd",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = quietHoursEnabled,
+                                    onCheckedChange = { viewModel.setQuietHoursEnabled(it) },
+                                    colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
+                                )
+                            }
+
+                            if (quietHoursEnabled) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    listOf(
+                                        "22:00" to "07:00",
+                                        "23:00" to "08:00",
+                                        "00:00" to "06:00"
+                                    ).forEach { (start, end) ->
+                                        val isSelected = quietHoursStart == start && quietHoursEnd == end
+                                        FilterChip(
+                                            selected = isSelected,
+                                            onClick = { viewModel.setQuietHoursRange(start, end) },
+                                            label = { Text("$start - $end") },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                                selectedLabelColor = Color.White
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -531,7 +609,7 @@ fun SettingsScreen(
                             Icon(
                                 imageVector = Icons.Default.CloudSync,
                                 contentDescription = null,
-                                tint = FlamePrimary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(22.dp)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
@@ -586,7 +664,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("drive_sign_in_button"),
-                            colors = ButtonDefaults.buttonColors(containerColor = FlamePrimary),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(Icons.Default.AccountCircle, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -618,14 +696,14 @@ fun SettingsScreen(
                                 } else {
                                     Surface(
                                         shape = CircleShape,
-                                        color = FlamePrimary.copy(alpha = 0.2f),
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                                         modifier = Modifier.size(40.dp)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Icon(
                                                 Icons.Default.AccountCircle,
                                                 contentDescription = null,
-                                                tint = FlamePrimary,
+                                                tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(24.dp)
                                             )
                                         }
@@ -713,7 +791,7 @@ fun SettingsScreen(
                                 modifier = Modifier.testTag("drive_auto_sync_switch"),
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
-                                    checkedTrackColor = FlamePrimary
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                         }
@@ -733,7 +811,7 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag("drive_backup_now_button"),
-                                colors = ButtonDefaults.buttonColors(containerColor = FlamePrimary),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 if (isSyncing) {
@@ -788,7 +866,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "Backup & Restore / النسخ الاحتياطي",
+                            text = stringResource(R.string.backup_restore),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -928,6 +1006,127 @@ fun SettingsScreen(
                             Text("Import JSON")
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // QR Sync (Feature 14)
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.exportData { json ->
+                                qrSyncExportJson = json
+                                showQrSyncDialog = true
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("qr_sync_settings_button"),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("QR Code Sync (Offline Transfer)", color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Advanced Backup & Desktop Companion (Features 24 & 40)
+                    Button(
+                        onClick = { onNavigateToAdvancedBackup?.invoke() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("btn_open_advanced_backup"),
+                        colors = ButtonDefaults.buttonColors(containerColor = InfoBlue),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Backup, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Advanced Backup & Desktop Companion")
+                    }
+                }
+            }
+        }
+
+        // Section: Habit Organization & Stacks (Features 22 & 31)
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("settings_habit_org_card"),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Text(
+                        text = "⚡ " + stringResource(R.string.habit_organization),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Chain habits together in sequence, or review habits you have paused and archived.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = { onNavigateToHabitChains?.invoke() },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("btn_open_habit_chains"),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Habit Chains", fontSize = 13.sp)
+                        }
+                        OutlinedButton(
+                            onClick = { onNavigateToArchive?.invoke() },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("btn_open_archive"),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Archive, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Archived", fontSize = 13.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = { onNavigateToCommunityHub?.invoke() },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("btn_open_community_hub"),
+                            colors = ButtonDefaults.buttonColors(containerColor = InfoBlue),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Groups, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("AI & Teams Hub", fontSize = 13.sp)
+                        }
+                        OutlinedButton(
+                            onClick = { onReplayOnboarding?.invoke() },
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("btn_replay_onboarding"),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Intro Tour", fontSize = 13.sp)
+                        }
+                    }
                 }
             }
         }
@@ -956,7 +1155,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "Categories / التصنيفات",
+                                text = stringResource(R.string.categories_title),
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -969,7 +1168,7 @@ fun SettingsScreen(
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "Add category",
-                                tint = FlamePrimary
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -977,10 +1176,11 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val defaultColor = MaterialTheme.colorScheme.primary
                         categories.forEach { cat ->
                             val c = try {
                                 Color(android.graphics.Color.parseColor(cat.colorHex))
-                            } catch (_: Exception) { FlamePrimary }
+                            } catch (_: Exception) { defaultColor }
 
                             Row(
                                 modifier = Modifier
@@ -1004,6 +1204,20 @@ fun SettingsScreen(
                                 )
                             }
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedButton(
+                        onClick = { onNavigateToCategories?.invoke() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("btn_manage_categories_full"),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp), tint = SuccessGreen)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Full Category Manager & Colors", color = SuccessGreen)
                     }
                 }
             }
@@ -1036,7 +1250,7 @@ fun SettingsScreen(
     if (showExportDialog) {
         AlertDialog(
             onDismissRequest = { showExportDialog = false },
-            title = { Text("Export Data / تصدير البيانات") },
+            title = { Text(stringResource(R.string.export_data)) },
             text = {
                 Column {
                     Text(
@@ -1101,7 +1315,7 @@ fun SettingsScreen(
 
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
-            title = { Text("Import Data / استيراد البيانات") },
+            title = { Text(stringResource(R.string.import_data)) },
             text = {
                 Column {
                     Text(
@@ -1141,9 +1355,9 @@ fun SettingsScreen(
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = FlamePrimary)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Restore / استعادة")
+                    Text(stringResource(R.string.restore))
                 }
             },
             dismissButton = {
@@ -1162,6 +1376,22 @@ fun SettingsScreen(
                 viewModel.addCategory(name, colorHex, iconName)
                 showAddCategoryDialog = false
                 Toast.makeText(context, "Added category $name!", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    // QR Sync Dialog (Feature 14)
+    if (showQrSyncDialog) {
+        QrSyncDialog(
+            exportJsonString = qrSyncExportJson ?: "",
+            onDismiss = {
+                showQrSyncDialog = false
+                qrSyncExportJson = null
+            },
+            onImportJson = { json ->
+                viewModel.importData(json) { success, msg ->
+                    Toast.makeText(context, if (success) "Sync successful! ✅" else "Sync error: $msg", Toast.LENGTH_LONG).show()
+                }
             }
         )
     }

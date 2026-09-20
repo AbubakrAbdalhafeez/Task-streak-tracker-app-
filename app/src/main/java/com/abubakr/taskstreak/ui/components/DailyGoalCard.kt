@@ -33,11 +33,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.abubakr.taskstreak.ui.theme.FlamePrimary
-import com.abubakr.taskstreak.ui.theme.FlameSecondary
+import com.abubakr.taskstreak.R
 import com.abubakr.taskstreak.ui.theme.SuccessGreen
 
 @Composable
@@ -81,21 +81,21 @@ fun DailyGoalCard(
                             .clip(CircleShape)
                             .background(
                                 if (isGoalReached) SuccessGreen.copy(alpha = 0.15f)
-                                else FlamePrimary.copy(alpha = 0.15f)
+                                else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.EmojiEvents,
                             contentDescription = "Daily Goal",
-                            tint = if (isGoalReached) SuccessGreen else FlamePrimary,
+                            tint = if (isGoalReached) SuccessGreen else MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
-                            text = "Daily Goal / الهدف اليومي",
+                            text = stringResource(R.string.daily_goal),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -155,7 +155,7 @@ fun DailyGoalCard(
                     .fillMaxWidth()
                     .height(10.dp)
                     .clip(RoundedCornerShape(5.dp)),
-                color = if (isGoalReached) SuccessGreen else FlamePrimary,
+                color = if (isGoalReached) SuccessGreen else MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = StrokeCap.Round
             )
@@ -174,7 +174,7 @@ fun DailyGoalCard(
                 Text(
                     text = if (isGoalReached) "Excellent commitment!" else "${(dailyGoal - completedToday).coerceAtLeast(0)} left",
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                    color = if (isGoalReached) SuccessGreen else FlameSecondary
+                    color = if (isGoalReached) SuccessGreen else MaterialTheme.colorScheme.secondary
                 )
             }
         }

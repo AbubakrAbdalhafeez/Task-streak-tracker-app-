@@ -62,7 +62,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abubakr.taskstreak.R
 import com.abubakr.taskstreak.data.model.TaskEntity
-import com.abubakr.taskstreak.ui.theme.FlamePrimary
 import com.abubakr.taskstreak.ui.theme.SuccessGreen
 import com.abubakr.taskstreak.util.SoundAndHapticHelper
 import kotlinx.coroutines.delay
@@ -166,8 +165,8 @@ fun PomodoroScreen(
                         },
                         label = { Text(mode.label.substringBefore(" ")) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = FlamePrimary.copy(alpha = 0.2f),
-                            selectedLabelColor = FlamePrimary
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                            selectedLabelColor = MaterialTheme.colorScheme.primary
                         ),
                         modifier = Modifier.padding(horizontal = 4.dp)
                     )
@@ -205,12 +204,12 @@ fun PomodoroScreen(
                     if (selectedTask != null) {
                         Surface(
                             shape = CircleShape,
-                            color = FlamePrimary.copy(alpha = 0.15f)
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                         ) {
                             Text(
                                 text = "🍅 x ${selectedTask.pomodoroCount}",
                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                color = FlamePrimary,
+                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
@@ -246,11 +245,12 @@ fun PomodoroScreen(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     strokeWidth = 14.dp,
                 )
+                val primaryColor = MaterialTheme.colorScheme.primary
                 CircularProgressIndicator(
                     progress = { animatedProgress },
                     modifier = Modifier.fillMaxSize(),
                     color = when (currentMode) {
-                        PomodoroMode.WORK -> FlamePrimary
+                        PomodoroMode.WORK -> primaryColor
                         PomodoroMode.SHORT_BREAK -> SuccessGreen
                         PomodoroMode.LONG_BREAK -> Color(0xFF3B82F6)
                     },
@@ -308,9 +308,9 @@ fun PomodoroScreen(
                         .testTag("pomodoro_toggle_button"),
                     shape = RoundedCornerShape(30.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isRunning) MaterialTheme.colorScheme.error else FlamePrimary
+                        containerColor = if (isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                     )
-                ) {
+                } {
                     Icon(
                         imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = null,
@@ -341,7 +341,7 @@ fun PomodoroScreen(
                         Text(
                             text = "$completedSessionsToday",
                             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                            color = FlamePrimary
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = "Sessions Done",

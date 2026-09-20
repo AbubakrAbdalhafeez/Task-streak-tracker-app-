@@ -120,6 +120,7 @@ dependencies {
   implementation(libs.androidx.work.runtime.ktx)
   implementation(libs.androidx.glance.appwidget)
   implementation(libs.androidx.glance.material3)
+  implementation(libs.zxing.core)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
   // Uncomment to use Firestore:

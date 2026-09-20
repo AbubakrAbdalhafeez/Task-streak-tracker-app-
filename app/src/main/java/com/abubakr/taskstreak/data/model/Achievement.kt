@@ -6,12 +6,17 @@ import com.abubakr.taskstreak.util.TaskStreakStats
 data class Achievement(
     val id: String,
     val title: String,
+    val titleAr: String,
     val description: String,
+    val descriptionAr: String,
     val iconEmoji: String,
     val isUnlocked: Boolean,
     val progress: Float, // 0.0 to 1.0
     val progressText: String
-)
+) {
+    fun localizedTitle(isArabic: Boolean): String = if (isArabic) titleAr else title
+    fun localizedDescription(isArabic: Boolean): String = if (isArabic) descriptionAr else description
+}
 
 object AchievementEvaluator {
     fun evaluateAchievements(
@@ -25,8 +30,10 @@ object AchievementEvaluator {
         val firstStepUnlocked = totalCompletions >= 1
         val firstStep = Achievement(
             id = "first_step",
-            title = "First Step / الخطوة الأولى",
+            title = "First Step",
+            titleAr = "الخطوة الأولى",
             description = "Complete your first task ever",
+            descriptionAr = "أكمل أول مهمة لك على الإطلاق",
             iconEmoji = "🌱",
             isUnlocked = firstStepUnlocked,
             progress = if (firstStepUnlocked) 1f else 0f,
@@ -37,8 +44,10 @@ object AchievementEvaluator {
         val sevenInRowUnlocked = bestStreak >= 7
         val sevenInRow = Achievement(
             id = "seven_in_a_row",
-            title = "7 in a Row / أسبوع ناري",
+            title = "7 in a Row",
+            titleAr = "أسبوع ناري",
             description = "Reach a 7-day streak on any task",
+            descriptionAr = "حقق سلسلة إنجاز لمدة 7 أيام في أي عادة",
             iconEmoji = "🔥",
             isUnlocked = sevenInRowUnlocked,
             progress = (bestStreak.toFloat() / 7f).coerceIn(0f, 1f),
@@ -49,8 +58,10 @@ object AchievementEvaluator {
         val thirtyInRowUnlocked = bestStreak >= 30
         val thirtyInRow = Achievement(
             id = "thirty_in_a_row",
-            title = "30 in a Row / شهر فولاذي",
+            title = "30 in a Row",
+            titleAr = "شهر فولاذي",
             description = "Reach a 30-day streak on any task",
+            descriptionAr = "حقق سلسلة إنجاز لمدة 30 يوماً متواصلاً",
             iconEmoji = "⚡",
             isUnlocked = thirtyInRowUnlocked,
             progress = (bestStreak.toFloat() / 30f).coerceIn(0f, 1f),
@@ -66,8 +77,10 @@ object AchievementEvaluator {
         val highAchieverUnlocked = highAchieverTask != null
         val highAchiever = Achievement(
             id = "high_achiever",
-            title = "High Achiever / صاحب الهمة",
+            title = "High Achiever",
+            titleAr = "صاحب الهمة",
             description = "Reach 80%+ completion rate on an established task (10+ scheduled days)",
+            descriptionAr = "حقق نسبة إنجاز 80%+ في مهمة مجدولة لمدة 10 أيام على الأقل",
             iconEmoji = "🎯",
             isUnlocked = highAchieverUnlocked,
             progress = (maxRateOnQualified / 80f).coerceIn(0f, 1f),
@@ -78,8 +91,10 @@ object AchievementEvaluator {
         val centurionUnlocked = totalCompletions >= 100
         val centurion = Achievement(
             id = "centurion",
-            title = "Centurion / نادي المائة",
+            title = "Centurion",
+            titleAr = "نادي المائة",
             description = "Reach 100 total task completions all time",
+            descriptionAr = "أنجز 100 مهمة في المجمل منذ انطلاقتك",
             iconEmoji = "🏆",
             isUnlocked = centurionUnlocked,
             progress = (totalCompletions.toFloat() / 100f).coerceIn(0f, 1f),
@@ -91,8 +106,10 @@ object AchievementEvaluator {
                 overallStats.completedTodayCount == overallStats.totalScheduledTodayCount
         val perfectDay = Achievement(
             id = "perfect_day",
-            title = "Perfect Day / يوم مثالي",
+            title = "Perfect Day",
+            titleAr = "يوم مثالي",
             description = "Finish all scheduled tasks for today (min 3 tasks)",
+            descriptionAr = "أنهِ جميع المهام المجدولة لليوم (3 مهام على الأقل)",
             iconEmoji = "✨",
             isUnlocked = perfectDayUnlocked,
             progress = if (overallStats.totalScheduledTodayCount > 0) {

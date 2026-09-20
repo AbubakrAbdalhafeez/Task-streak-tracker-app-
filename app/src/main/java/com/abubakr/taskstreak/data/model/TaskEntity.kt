@@ -1,7 +1,9 @@
 package com.abubakr.taskstreak.data.model
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.abubakr.taskstreak.util.DateUtils
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -11,7 +13,14 @@ enum class RecurrenceType {
     ONCE
 }
 
-@Entity(tableName = "tasks")
+@Entity(
+    tableName = "tasks",
+    indices = [
+        Index(value = ["isArchived"]),
+        Index(value = ["category"]),
+        Index(value = ["createdAt"])
+    ]
+)
 data class TaskEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -20,7 +29,7 @@ data class TaskEntity(
     val categoryColorHex: String = "#FF6B35",
     val recurrenceType: String = RecurrenceType.DAILY.name,
     val customDaysOfWeek: String = "1,2,3,4,5,6,7", // 1=Monday..7=Sunday
-    val startDate: String, // "yyyy-MM-dd"
+    val startDate: String = DateUtils.todayString(), // "yyyy-MM-dd"
     val endDate: String? = null, // "yyyy-MM-dd"
     val reminderTime: String? = null, // "09:00"
     val createdAt: Long = System.currentTimeMillis(),

@@ -36,10 +36,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.abubakr.taskstreak.ui.theme.FlamePrimary
+import com.abubakr.taskstreak.R
 
 @Composable
 fun AddCategoryDialog(
@@ -75,7 +76,7 @@ fun AddCategoryDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "New Category / تصنيف جديد",
+                        text = stringResource(R.string.new_category),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -92,7 +93,7 @@ fun AddCategoryDialog(
                         name = it
                         if (it.isNotBlank()) nameError = false
                     },
-                    label = { Text("Category Name / اسم التصنيف") },
+                    label = { Text(stringResource(R.string.category_name)) },
                     placeholder = { Text("e.g. Reading, Meditation, Coding...") },
                     singleLine = true,
                     isError = nameError,
@@ -102,7 +103,7 @@ fun AddCategoryDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "Pick a Color / اختر لوناً:",
+                    text = stringResource(R.string.pick_a_color),
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -158,7 +159,7 @@ fun AddCategoryDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel / إلغاء")
+                        Text(stringResource(R.string.cancel))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -169,10 +170,10 @@ fun AddCategoryDialog(
                             }
                             onSave(name.trim(), selectedColor, "Bookmark")
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = FlamePrimary),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         modifier = Modifier.testTag("category_save_button")
                     ) {
-                        Text("Save / حفظ")
+                        Text(stringResource(R.string.save))
                     }
                 }
             }

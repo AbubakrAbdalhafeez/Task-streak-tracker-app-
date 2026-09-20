@@ -1,5 +1,5 @@
 {
-  "name": "Task Streak Tracker",
+  "name": "Streak Tracker",
   "description": "Daily task and habit streak tracker with calendar grids, GitHub-style 12-week heatmap, progress analytics, daily goals and achievements.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

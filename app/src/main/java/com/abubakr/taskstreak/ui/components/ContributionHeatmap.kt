@@ -26,12 +26,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abubakr.taskstreak.R
 import com.abubakr.taskstreak.data.model.TaskEntity
 import com.abubakr.taskstreak.ui.theme.DangerRed
-import com.abubakr.taskstreak.ui.theme.FlamePrimary
 import com.abubakr.taskstreak.ui.theme.SuccessGreen
 import com.abubakr.taskstreak.ui.theme.SuccessGreenLight
 import com.abubakr.taskstreak.util.DateUtils
@@ -98,7 +99,7 @@ fun ContributionHeatmap(
             ) {
                 Column {
                     Text(
-                        text = "12-Week Heatmap / نشاط الـ 12 أسبوع",
+                        text = stringResource(R.string.twelve_week_heatmap),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -202,7 +203,7 @@ fun ContributionHeatmap(
                             .background(SuccessGreen)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Done", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp))
+                    Text(stringResource(R.string.heatmap_done), style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp))
 
                     Spacer(modifier = Modifier.width(8.dp))
 
@@ -213,7 +214,7 @@ fun ContributionHeatmap(
                             .background(DangerRed.copy(alpha = 0.35f))
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Missed", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp))
+                    Text(stringResource(R.string.heatmap_missed), style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp))
 
                     Spacer(modifier = Modifier.width(8.dp))
 
@@ -222,10 +223,10 @@ fun ContributionHeatmap(
                             .size(12.dp)
                             .clip(RoundedCornerShape(3.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, FlamePrimary, RoundedCornerShape(3.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(3.dp))
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Today", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp))
+                    Text(stringResource(R.string.heatmap_today), style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp))
 
                     Spacer(modifier = Modifier.width(8.dp))
 
@@ -236,7 +237,7 @@ fun ContributionHeatmap(
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Unscheduled", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp))
+                    Text(stringResource(R.string.heatmap_unscheduled), style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp))
                 }
             }
         }

@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.abubakr.taskstreak.data.model.CategoryEntity
 import com.abubakr.taskstreak.data.model.CompletionLogEntity
+import com.abubakr.taskstreak.data.model.HabitChainEntity
 import com.abubakr.taskstreak.data.model.SubtaskEntity
 import com.abubakr.taskstreak.data.model.TaskEntity
 import kotlinx.coroutines.CoroutineScope
@@ -19,9 +20,10 @@ import java.time.LocalDate
         TaskEntity::class,
         CompletionLogEntity::class,
         CategoryEntity::class,
-        SubtaskEntity::class
+        SubtaskEntity::class,
+        HabitChainEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,6 +31,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun completionLogDao(): CompletionLogDao
     abstract fun categoryDao(): CategoryDao
     abstract fun subtaskDao(): SubtaskDao
+    abstract fun habitChainDao(): HabitChainDao
 
     companion object {
         @Volatile

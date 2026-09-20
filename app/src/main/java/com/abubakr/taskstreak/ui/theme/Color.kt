@@ -2,11 +2,22 @@ package com.abubakr.taskstreak.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Flame & Ember Accent Colors
-val FlamePrimary = Color(0xFFFF5722)
-val FlamePrimaryVariant = Color(0xFFE64A19)
-val FlameSecondary = Color(0xFFFF9800)
-val FlameTertiary = Color(0xFFFFB74D)
+// Primary Accent Colors: Red in Dark Mode, Blue in Light Mode
+val DarkModeRed = Color(0xFFEF4444)
+val DarkModeRedVariant = Color(0xFFDC2626)
+val DarkModeRedSecondary = Color(0xFFF87171)
+val DarkModeRedTertiary = Color(0xFFB91C1C)
+
+val LightModeBlue = Color(0xFF2563EB)
+val LightModeBlueVariant = Color(0xFF1D4ED8)
+val LightModeBlueSecondary = Color(0xFF3B82F6)
+val LightModeBlueTertiary = Color(0xFF60A5FA)
+
+// Compatibility aliases without any orange (redirected to Blue / Red)
+val FlamePrimary = LightModeBlue
+val FlamePrimaryVariant = LightModeBlueVariant
+val FlameSecondary = LightModeBlueSecondary
+val FlameTertiary = LightModeBlueTertiary
 
 // Forest Theme Colors (#10B981, #059669, #064E3B)
 val ForestPrimary = Color(0xFF10B981)
@@ -26,11 +37,11 @@ val TwilightPrimaryVariant = Color(0xFF7C3AED)
 val TwilightSecondary = Color(0xFFA78BFA)
 val TwilightTertiary = Color(0xFF2E1065)
 
-val FireAccent = Color(0xFFFF6D00)
+val FireAccent = DarkModeRed
 val SuccessGreen = Color(0xFF10B981)
 val SuccessGreenLight = Color(0xFF34D399)
 val SuccessGreenDark = Color(0xFF059669)
-val WarningOrange = Color(0xFFF59E0B)
+val WarningOrange = Color(0xFFFBBF24) // Amber/Gold, strictly non-orange
 val DangerRed = Color(0xFFEF4444)
 val DangerRedLight = Color(0xFFF87171)
 val InfoBlue = Color(0xFF3B82F6)

@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
     <application
         android:allowBackup="true"
@@ -30,7 +31,32 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+
+        <service
+            android:name="com.abubakr.taskstreak.util.StreakWallpaperService"
+            android:enabled="true"
+            android:exported="true"
+            android:label="Task Streak Live Wallpaper"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/streak_wallpaper" />
+        </service>
+
+        <receiver
+            android:name="com.abubakr.taskstreak.util.WearSyncReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.abubakr.taskstreak.ACTION_WEAR_COMPLETE_TASK" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name="com.abubakr.taskstreak.widget.TodayTasksWidgetReceiver"
@@ -61,6 +87,15 @@
         <receiver
             android:name="com.abubakr.taskstreak.util.NotificationActionReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name="com.abubakr.taskstreak.util.TimeZoneChangeReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

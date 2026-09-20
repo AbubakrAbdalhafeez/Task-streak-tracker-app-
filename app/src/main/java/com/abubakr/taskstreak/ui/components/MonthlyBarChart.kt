@@ -26,13 +26,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abubakr.taskstreak.R
 import com.abubakr.taskstreak.data.model.CompletionLogEntity
-import com.abubakr.taskstreak.ui.theme.FlamePrimary
-import com.abubakr.taskstreak.ui.theme.FlameSecondary
 import com.abubakr.taskstreak.util.DateUtils
 import java.time.LocalDate
 import java.time.Month
@@ -85,7 +85,7 @@ fun MonthlyBarChart(
             ) {
                 Column {
                     Text(
-                        text = "Monthly Progress / الإنجاز الشهري ($targetYear)",
+                        text = stringResource(R.string.monthly_progress, targetYear.toString()),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -99,7 +99,7 @@ fun MonthlyBarChart(
                 Text(
                     text = "${monthCounts.sum()} total",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = FlamePrimary
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -134,12 +134,14 @@ fun MonthlyBarChart(
                             Text(
                                 text = "$count",
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
-                                color = if (isCurrentMonth) FlamePrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (isCurrentMonth) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                         }
 
                         // The Bar
+                        val primaryColor = MaterialTheme.colorScheme.primary
+                        val secondaryColor = MaterialTheme.colorScheme.secondary
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(0.65f)
@@ -147,12 +149,12 @@ fun MonthlyBarChart(
                                 .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                                 .background(
                                     if (isCurrentMonth) {
-                                        Brush.verticalGradient(listOf(FlamePrimary, FlameSecondary))
+                                        Brush.verticalGradient(listOf(primaryColor, secondaryColor))
                                     } else if (count > 0) {
                                         Brush.verticalGradient(
                                             listOf(
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                                                primaryColor.copy(alpha = 0.7f),
+                                                primaryColor.copy(alpha = 0.4f)
                                             )
                                         )
                                     } else {
@@ -167,7 +169,7 @@ fun MonthlyBarChart(
                                 .then(
                                     if (isCurrentMonth) Modifier.border(
                                         1.dp,
-                                        FlamePrimary,
+                                        primaryColor,
                                         RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
                                     )
                                     else Modifier

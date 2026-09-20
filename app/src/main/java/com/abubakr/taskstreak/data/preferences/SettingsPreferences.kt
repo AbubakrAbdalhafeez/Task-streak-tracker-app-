@@ -76,6 +76,185 @@ class SettingsPreferences(context: Context) {
         MutableStateFlow(prefs.getBoolean("vacation_mode", false))
     val vacationMode: StateFlow<Boolean> = _vacationMode.asStateFlow()
 
+    private val _quietHoursEnabled =
+        MutableStateFlow(prefs.getBoolean("quiet_hours_enabled", false))
+    val quietHoursEnabled: StateFlow<Boolean> = _quietHoursEnabled.asStateFlow()
+
+    private val _quietHoursStart =
+        MutableStateFlow(prefs.getString("quiet_hours_start", "22:00") ?: "22:00")
+    val quietHoursStart: StateFlow<String> = _quietHoursStart.asStateFlow()
+
+    private val _quietHoursEnd =
+        MutableStateFlow(prefs.getString("quiet_hours_end", "07:00") ?: "07:00")
+    val quietHoursEnd: StateFlow<String> = _quietHoursEnd.asStateFlow()
+
+    // Gamification (Feature 34)
+    private val _totalXp = MutableStateFlow(prefs.getLong("user_total_xp", 120L))
+    val totalXp: StateFlow<Long> = _totalXp.asStateFlow()
+
+    private val _streakShields = MutableStateFlow(prefs.getInt("streak_shields_count", 2))
+    val streakShields: StateFlow<Int> = _streakShields.asStateFlow()
+
+    private val _streakShieldsUsed = MutableStateFlow(prefs.getInt("streak_shields_used", 0))
+    val streakShieldsUsed: StateFlow<Int> = _streakShieldsUsed.asStateFlow()
+
+    // Accessibility (Feature 26)
+    private val _highContrastEnabled = MutableStateFlow(prefs.getBoolean("high_contrast_enabled", false))
+    val highContrastEnabled: StateFlow<Boolean> = _highContrastEnabled.asStateFlow()
+
+    private val _largeTextScaleEnabled = MutableStateFlow(prefs.getBoolean("large_text_scale_enabled", false))
+    val largeTextScaleEnabled: StateFlow<Boolean> = _largeTextScaleEnabled.asStateFlow()
+
+    private val _colorblindMode = MutableStateFlow(prefs.getString("colorblind_mode", "NONE") ?: "NONE")
+    val colorblindMode: StateFlow<String> = _colorblindMode.asStateFlow()
+
+    // Task Archive settings (Feature 22)
+    private val _autoArchiveDays = MutableStateFlow(prefs.getInt("auto_archive_days", 0)) // 0 = disabled
+    val autoArchiveDays: StateFlow<Int> = _autoArchiveDays.asStateFlow()
+
+    // Categories (Feature 23)
+    private val _hideUnusedCategories = MutableStateFlow(prefs.getBoolean("hide_unused_categories", false))
+    val hideUnusedCategories: StateFlow<Boolean> = _hideUnusedCategories.asStateFlow()
+
+    // Smart Notifications (Feature 30)
+    private val _smartNotificationsEnabled = MutableStateFlow(prefs.getBoolean("smart_notifications_enabled", true))
+    val smartNotificationsEnabled: StateFlow<Boolean> = _smartNotificationsEnabled.asStateFlow()
+
+    // Onboarding (Feature 41)
+    private val _onboardingCompleted = MutableStateFlow(prefs.getBoolean("onboarding_completed", false))
+    val onboardingCompleted: StateFlow<Boolean> = _onboardingCompleted.asStateFlow()
+
+    // Time Zone Travel Mode (Feature 49)
+    private val _travelModeEnabled = MutableStateFlow(prefs.getBoolean("travel_mode_enabled", false))
+    val travelModeEnabled: StateFlow<Boolean> = _travelModeEnabled.asStateFlow()
+
+    // Encrypted Backup password (Feature 50)
+    private val _hasBackupPassword = MutableStateFlow(prefs.getBoolean("has_backup_password", false))
+    val hasBackupPassword: StateFlow<Boolean> = _hasBackupPassword.asStateFlow()
+
+    // Google Fit / Health Sync (Feature 55)
+    private val _googleFitSyncEnabled = MutableStateFlow(prefs.getBoolean("google_fit_sync_enabled", false))
+    val googleFitSyncEnabled: StateFlow<Boolean> = _googleFitSyncEnabled.asStateFlow()
+
+    fun addXp(amount: Long) {
+        val updated = (_totalXp.value + amount).coerceAtLeast(0L)
+        prefs.edit().putLong("user_total_xp", updated).apply()
+        _totalXp.value = updated
+    }
+
+    fun useStreakShield(): Boolean {
+        if (_streakShields.value > 0) {
+            val remaining = _streakShields.value - 1
+            val used = _streakShieldsUsed.value + 1
+            prefs.edit()
+                .putInt("streak_shields_count", remaining)
+                .putInt("streak_shields_used", used)
+                .apply()
+            _streakShields.value = remaining
+            _streakShieldsUsed.value = used
+            return true
+        }
+        return false
+    }
+
+    fun addStreakShield(count: Int = 1) {
+        val updated = _streakShields.value + count
+        prefs.edit().putInt("streak_shields_count", updated).apply()
+        _streakShields.value = updated
+    }
+
+    fun setHighContrastEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("high_contrast_enabled", enabled).apply()
+        _highContrastEnabled.value = enabled
+    }
+
+    fun setLargeTextScaleEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("large_text_scale_enabled", enabled).apply()
+        _largeTextScaleEnabled.value = enabled
+    }
+
+    fun setColorblindMode(mode: String) {
+        prefs.edit().putString("colorblind_mode", mode).apply()
+        _colorblindMode.value = mode
+    }
+
+    fun setAutoArchiveDays(days: Int) {
+        prefs.edit().putInt("auto_archive_days", days).apply()
+        _autoArchiveDays.value = days
+    }
+
+    fun setHideUnusedCategories(hide: Boolean) {
+        prefs.edit().putBoolean("hide_unused_categories", hide).apply()
+        _hideUnusedCategories.value = hide
+    }
+
+    fun setSmartNotificationsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("smart_notifications_enabled", enabled).apply()
+        _smartNotificationsEnabled.value = enabled
+    }
+
+    fun setOnboardingCompleted(completed: Boolean) {
+        prefs.edit().putBoolean("onboarding_completed", completed).apply()
+        _onboardingCompleted.value = completed
+    }
+
+    fun setTravelModeEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("travel_mode_enabled", enabled).apply()
+        _travelModeEnabled.value = enabled
+    }
+
+    fun setBackupPassword(password: String?) {
+        if (password.isNullOrBlank()) {
+            prefs.edit().remove("backup_password_hash").putBoolean("has_backup_password", false).apply()
+            _hasBackupPassword.value = false
+        } else {
+            // Store simple SHA-256 hash
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            val hash = md.digest(password.toByteArray()).joinToString("") { "%02x".format(it) }
+            prefs.edit().putString("backup_password_hash", hash).putBoolean("has_backup_password", true).apply()
+            _hasBackupPassword.value = true
+        }
+    }
+
+    fun verifyBackupPassword(password: String): Boolean {
+        val storedHash = prefs.getString("backup_password_hash", null) ?: return true
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        val inputHash = md.digest(password.toByteArray()).joinToString("") { "%02x".format(it) }
+        return storedHash == inputHash
+    }
+
+    fun setGoogleFitSyncEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("google_fit_sync_enabled", enabled).apply()
+        _googleFitSyncEnabled.value = enabled
+    }
+
+    fun setQuietHoursEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("quiet_hours_enabled", enabled).apply()
+        _quietHoursEnabled.value = enabled
+    }
+
+    fun setQuietHoursTimes(start: String, end: String) {
+        prefs.edit().putString("quiet_hours_start", start).putString("quiet_hours_end", end).apply()
+        _quietHoursStart.value = start
+        _quietHoursEnd.value = end
+    }
+
+    fun isQuietHoursNow(): Boolean {
+        if (!_quietHoursEnabled.value) return false
+        return try {
+            val now = java.time.LocalTime.now()
+            val start = java.time.LocalTime.parse(_quietHoursStart.value)
+            val end = java.time.LocalTime.parse(_quietHoursEnd.value)
+            if (start.isBefore(end)) {
+                now.isAfter(start) && now.isBefore(end)
+            } else {
+                now.isAfter(start) || now.isBefore(end)
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     fun setColorPalette(palette: String) {
         prefs.edit().putString("color_palette", palette).apply()
         _colorPalette.value = palette

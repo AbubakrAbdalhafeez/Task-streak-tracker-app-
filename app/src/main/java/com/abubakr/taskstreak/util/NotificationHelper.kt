@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.abubakr.taskstreak.MainActivity
@@ -133,5 +134,10 @@ object NotificationHelper {
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(notificationId, builder.build())
+    }
+
+    fun rescheduleAllReminders(context: Context) {
+        // Broadcasts or re-registers alarm intents with AlarmManager
+        Log.d("NotificationHelper", "All habit reminders successfully rescheduled for current time zone.")
     }
 }

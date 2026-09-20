@@ -33,13 +33,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abubakr.taskstreak.R
 import com.abubakr.taskstreak.data.model.TaskEntity
 import com.abubakr.taskstreak.ui.theme.DangerRed
-import com.abubakr.taskstreak.ui.theme.FlamePrimary
 import com.abubakr.taskstreak.ui.theme.SuccessGreen
 import com.abubakr.taskstreak.util.DateUtils
 import java.time.DayOfWeek
@@ -201,7 +202,7 @@ fun MonthlyCalendarView(
                                     .then(
                                         if (isToday) Modifier.border(
                                             2.dp,
-                                            FlamePrimary,
+                                            MaterialTheme.colorScheme.primary,
                                             RoundedCornerShape(8.dp)
                                         )
                                         else if (!isScheduled) Modifier.border(
@@ -241,7 +242,7 @@ fun MonthlyCalendarView(
                                             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
                                         ),
                                         color = when {
-                                            isToday -> FlamePrimary
+                                            isToday -> MaterialTheme.colorScheme.primary
                                             isMissed -> DangerRed
                                             !isScheduled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                                             isFuture -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
@@ -271,16 +272,16 @@ fun MonthlyCalendarView(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                LegendItem(color = SuccessGreen, label = "Done / منجز")
-                LegendItem(color = DangerRed.copy(alpha = 0.25f), label = "Missed / فائت")
+                LegendItem(color = SuccessGreen, label = stringResource(R.string.heatmap_done))
+                LegendItem(color = DangerRed.copy(alpha = 0.25f), label = stringResource(R.string.heatmap_missed))
                 LegendItem(
                     color = MaterialTheme.colorScheme.surfaceVariant,
-                    borderColor = FlamePrimary,
-                    label = "Today / اليوم"
+                    borderColor = MaterialTheme.colorScheme.primary,
+                    label = stringResource(R.string.heatmap_today)
                 )
                 LegendItem(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                    label = "Unscheduled"
+                    label = stringResource(R.string.heatmap_unscheduled)
                 )
             }
         }

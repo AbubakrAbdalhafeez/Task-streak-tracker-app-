@@ -11,12 +11,23 @@ import com.abubakr.taskstreak.data.model.Achievement
 import com.abubakr.taskstreak.data.model.AchievementEvaluator
 import com.abubakr.taskstreak.data.model.CategoryEntity
 import com.abubakr.taskstreak.data.model.CompletionLogEntity
+import com.abubakr.taskstreak.data.model.GamificationCalculator
+import com.abubakr.taskstreak.data.model.HabitChainEntity
+import com.abubakr.taskstreak.data.model.Quest
 import com.abubakr.taskstreak.data.model.TaskEntity
+import com.abubakr.taskstreak.data.model.UserLevel
 import com.abubakr.taskstreak.data.preferences.SettingsPreferences
 import com.abubakr.taskstreak.data.repository.StreakRepository
+import com.abubakr.taskstreak.util.CalendarSyncHelper
+import com.abubakr.taskstreak.util.DataInsightsEngine
 import com.abubakr.taskstreak.util.DateUtils
+import com.abubakr.taskstreak.util.MotivationEngine
+import com.abubakr.taskstreak.util.NetworkMonitor
 import com.abubakr.taskstreak.util.NotificationHelper
 import com.abubakr.taskstreak.util.OverallStats
+import com.abubakr.taskstreak.util.ParsedVoiceTask
+import com.abubakr.taskstreak.util.ProductivityInsight
+import com.abubakr.taskstreak.util.SocialShareHelper
 import com.abubakr.taskstreak.util.StreakCalculator
 import com.abubakr.taskstreak.util.TaskStreakStats
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +36,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -33,10 +45,24 @@ import java.time.LocalDate
 class StreakViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getDatabase(application)
-    private val repository = StreakRepository(db.taskDao(), db.completionLogDao(), db.categoryDao(), db.subtaskDao())
+    private val repository = StreakRepository(
+        db.taskDao(),
+        db.completionLogDao(),
+        db.categoryDao(),
+        db.subtaskDao(),
+        db.habitChainDao()
+    )
     val preferences = SettingsPreferences(application)
+    val networkMonitor = NetworkMonitor(application)
+    val isOnline: StateFlow<Boolean> = networkMonitor.isOnline
 
     val tasks: StateFlow<List<TaskEntity>> = repository.allActiveTasks
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val archivedTasks: StateFlow<List<TaskEntity>> = repository.archivedTasks
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val habitChains: StateFlow<List<HabitChainEntity>> = repository.allChains
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val logs: StateFlow<List<CompletionLogEntity>> = repository.allLogs
@@ -47,6 +73,22 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
 
     val subtasks: StateFlow<List<com.abubakr.taskstreak.data.model.SubtaskEntity>> = repository.allSubtasks
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Gamification state
+    val totalXp: StateFlow<Long> = preferences.totalXp
+    val streakShields: StateFlow<Int> = preferences.streakShields
+    val streakShieldsUsed: StateFlow<Int> = preferences.streakShieldsUsed
+
+    val userLevel: StateFlow<UserLevel> = totalXp.map {
+        GamificationCalculator.calculateLevel(it)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), GamificationCalculator.calculateLevel(120L))
+
+    // Data Insights
+    val productivityInsights: StateFlow<ProductivityInsight> = logs.map {
+        DataInsightsEngine.generateInsights(it)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DataInsightsEngine.generateInsights(emptyList()))
+
+    val todayQuote = MotivationEngine.getTodayQuote()
 
     val subtasksMap: StateFlow<Map<Long, List<com.abubakr.taskstreak.data.model.SubtaskEntity>>> = subtasks.combine(tasks) { allSubs, _ ->
         allSubs.groupBy { it.taskId }
@@ -87,14 +129,137 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
         AchievementEvaluator.evaluateAchievements(stats, statsMap)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Search, Filter, Sort
+    val searchQuery = MutableStateFlow("")
+    val statusFilter = MutableStateFlow("ALL") // ALL, PENDING, COMPLETED
+    val typeFilter = MutableStateFlow("ALL")     // ALL, HABIT, TASK
+    val sortOption = MutableStateFlow("DEFAULT") // DEFAULT, STREAK, NAME, RECENT
+
+    // Bulk selection state
+    val isSelectionMode = MutableStateFlow(false)
+    val selectedTaskIds = MutableStateFlow<Set<Long>>(emptySet())
+
+    // Undo state
+    private var lastDeletedTask: TaskEntity? = null
+    private var lastDeletedDates: Set<String> = emptySet()
+    private var lastToggledTaskId: Long? = null
+    private var lastToggledDate: String? = null
+    private var lastToggledWasComplete: Boolean = false
+
+    fun toggleSelection(taskId: Long) {
+        val current = selectedTaskIds.value.toMutableSet()
+        if (current.contains(taskId)) {
+            current.remove(taskId)
+        } else {
+            current.add(taskId)
+        }
+        selectedTaskIds.value = current
+        if (current.isEmpty()) {
+            isSelectionMode.value = false
+        }
+    }
+
+    fun startSelection(taskId: Long) {
+        isSelectionMode.value = true
+        selectedTaskIds.value = setOf(taskId)
+    }
+
+    fun selectAll(allIds: List<Long>) {
+        selectedTaskIds.value = allIds.toSet()
+    }
+
+    fun clearSelection() {
+        isSelectionMode.value = false
+        selectedTaskIds.value = emptySet()
+    }
+
+    fun bulkCompleteSelected() {
+        val ids = selectedTaskIds.value.toList()
+        if (ids.isEmpty()) return
+        val todayStr = DateUtils.todayString()
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.bulkSetCompletion(ids, todayStr, true)
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+            withContext(Dispatchers.Main) {
+                clearSelection()
+            }
+        }
+    }
+
+    fun bulkDeleteSelected() {
+        val ids = selectedTaskIds.value.toList()
+        if (ids.isEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.bulkDeleteTasks(ids)
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+            withContext(Dispatchers.Main) {
+                clearSelection()
+            }
+        }
+    }
+
+    fun deleteTaskWithUndo(task: TaskEntity, onUndoAvailable: (String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val dates = taskCompletionsMap.value[task.id] ?: emptySet()
+            lastDeletedTask = task
+            lastDeletedDates = dates
+            repository.deleteTask(task)
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+            withContext(Dispatchers.Main) {
+                onUndoAvailable(task.title)
+            }
+        }
+    }
+
+    fun undoDelete() {
+        val task = lastDeletedTask ?: return
+        val dates = lastDeletedDates
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.restoreTaskWithLogs(task, dates)
+            lastDeletedTask = null
+            lastDeletedDates = emptySet()
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+        }
+    }
+
+    fun getDailyQuote(): Pair<String, String> {
+        val quotes = listOf(
+            "We are what we repeatedly do. Excellence, then, is not an act, but a habit." to "Aristotle",
+            "Small daily improvements over time lead to stunning results." to "Robin Sharma",
+            "Consistency is what transforms average into excellence." to "Tony Robbins",
+            "You do not rise to the level of your goals. You fall to the level of your systems." to "James Clear",
+            "Success is the sum of small efforts, repeated day in and day out." to "Robert Collier",
+            "Motivation is what gets you started. Habit is what keeps you going." to "Jim Ryun",
+            "Habits are the compound interest of self-improvement." to "James Clear"
+        )
+        val dayIndex = (LocalDate.now().dayOfYear) % quotes.size
+        return quotes[dayIndex]
+    }
+
     fun setSelectedCategory(category: String?) {
         _selectedCategory.value = category
     }
 
     fun toggleTaskToday(taskId: Long) {
         val todayStr = DateUtils.todayString()
+        val currentlyDone = taskCompletionsMap.value[taskId]?.contains(todayStr) == true
+        lastToggledTaskId = taskId
+        lastToggledDate = todayStr
+        lastToggledWasComplete = !currentlyDone
         viewModelScope.launch(Dispatchers.IO) {
             repository.toggleTaskCompletion(taskId, todayStr)
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+        }
+    }
+
+    fun undoToggleTaskCompletion() {
+        val taskId = lastToggledTaskId ?: return
+        val date = lastToggledDate ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            // Toggling again restores the previous state
+            repository.toggleTaskCompletion(taskId, date)
+            lastToggledTaskId = null
+            lastToggledDate = null
             com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
         }
     }
@@ -407,5 +572,146 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
             "Task Streak Tracker 🔥",
             msg
         )
+    }
+
+    fun setQuietHoursEnabled(enabled: Boolean) {
+        preferences.setQuietHoursEnabled(enabled)
+    }
+
+    fun setQuietHoursRange(start: String, end: String) {
+        preferences.setQuietHoursTimes(start, end)
+    }
+
+    // Feature 22: Task Archive
+    fun archiveTask(taskId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.archiveTask(taskId)
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+        }
+    }
+
+    fun unarchiveTask(taskId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.unarchiveTask(taskId)
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+        }
+    }
+
+    fun deleteArchivedTasks() {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteArchivedTasks()
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+        }
+    }
+
+    // Feature 23: Category Management
+    fun updateCategory(category: CategoryEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateCategory(category)
+        }
+    }
+
+    fun deleteCategory(category: CategoryEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteCategory(category)
+            if (_selectedCategory.value == category.name) {
+                _selectedCategory.value = null
+            }
+        }
+    }
+
+    // Feature 31: Habit Chains
+    fun saveHabitChain(title: String, description: String, taskIds: List<Long>, colorHex: String, bonusXp: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val taskIdsStr = taskIds.joinToString(",")
+            val chain = HabitChainEntity(
+                title = title.trim(),
+                description = description.trim(),
+                taskIds = taskIdsStr,
+                colorHex = colorHex,
+                bonusXp = bonusXp
+            )
+            repository.insertChain(chain)
+            addXp(bonusXp.toLong())
+        }
+    }
+
+    fun deleteHabitChain(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteChain(id)
+        }
+    }
+
+    // Feature 34: Gamification & Quests
+    fun addXp(amount: Long) {
+        preferences.addXp(amount)
+    }
+
+    fun useStreakShield(): Boolean {
+        return preferences.useStreakShield()
+    }
+
+    fun addStreakShield(count: Int = 1) {
+        preferences.addStreakShield(count)
+    }
+
+    // Feature 35: Voice Input
+    fun addVoiceTask(parsed: ParsedVoiceTask) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val task = TaskEntity(
+                title = parsed.title,
+                category = parsed.category,
+                recurrenceType = parsed.recurrenceType.name,
+                reminderTime = parsed.reminderTime,
+                startDate = DateUtils.todayString(),
+                isHabit = true
+            )
+            repository.insertTask(task)
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+        }
+    }
+
+    // Feature 38: Calendar Integration
+    fun syncTaskToCalendar(context: android.content.Context, task: TaskEntity) {
+        CalendarSyncHelper.addTaskToCalendar(context, task)
+    }
+
+    // Feature 24 & 40: Advanced Import / Export & Desktop Sync
+    fun exportDesktopJson(onResult: (String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val json = repository.exportDesktopJson()
+            withContext(Dispatchers.Main) {
+                onResult(json)
+            }
+        }
+    }
+
+    fun exportMarkdown(onResult: (String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val md = repository.exportMarkdown()
+            withContext(Dispatchers.Main) {
+                onResult(md)
+            }
+        }
+    }
+
+    fun importAdvancedJson(
+        jsonString: String,
+        mergeMode: Boolean = false,
+        selectedTitles: Set<String>? = null,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val res = repository.importDataFromJson(jsonString, mergeMode, selectedTitles)
+            withContext(Dispatchers.Main) {
+                if (res.isSuccess) {
+                    val count = res.getOrDefault(0)
+                    com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+                    onResult(true, "Successfully imported $count tasks!")
+                } else {
+                    onResult(false, res.exceptionOrNull()?.localizedMessage ?: "Import failed")
+                }
+            }
+        }
     }
 }

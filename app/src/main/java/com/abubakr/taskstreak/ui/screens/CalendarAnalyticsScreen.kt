@@ -24,6 +24,10 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Percent
+import android.content.Intent
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -43,16 +47,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.abubakr.taskstreak.R
 import com.abubakr.taskstreak.data.model.TaskEntity
 import com.abubakr.taskstreak.ui.components.ContributionHeatmap
 import com.abubakr.taskstreak.ui.components.MonthlyBarChart
 import com.abubakr.taskstreak.ui.components.MonthlyCalendarView
-import com.abubakr.taskstreak.ui.theme.FlamePrimary
-import com.abubakr.taskstreak.ui.theme.FlameSecondary
 import com.abubakr.taskstreak.ui.theme.InfoBlue
 import com.abubakr.taskstreak.ui.theme.SuccessGreen
 import com.abubakr.taskstreak.ui.viewmodel.StreakViewModel
@@ -65,6 +69,7 @@ fun CalendarAnalyticsScreen(
     initialSelectedTask: TaskEntity? = null,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val tasks by viewModel.tasks.collectAsStateWithLifecycle()
     val logs by viewModel.logs.collectAsStateWithLifecycle()
     val taskCompletionsMap by viewModel.taskCompletionsMap.collectAsStateWithLifecycle()
@@ -94,12 +99,12 @@ fun CalendarAnalyticsScreen(
         item {
             Column {
                 Text(
-                    text = "Calendar & Analytics",
+                    text = stringResource(R.string.calendar_analytics_title),
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    text = "التقويم، الـ Heatmap، والتحليلات البيانية",
+                    text = stringResource(R.string.calendar_analytics_sub),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -125,10 +130,11 @@ fun CalendarAnalyticsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            val defaultColor = MaterialTheme.colorScheme.primary
                             val color = selectedTask?.let {
                                 try { Color(android.graphics.Color.parseColor(it.categoryColorHex)) }
-                                catch (_: Exception) { FlamePrimary }
-                            } ?: FlamePrimary
+                                catch (_: Exception) { defaultColor }
+                            } ?: defaultColor
 
                             Box(
                                 modifier = Modifier
@@ -161,13 +167,14 @@ fun CalendarAnalyticsScreen(
                         expanded = showTaskPicker,
                         onDismissRequest = { showTaskPicker = false }
                     ) {
+                        val defaultColor = MaterialTheme.colorScheme.primary
                         tasks.forEach { t ->
                             DropdownMenuItem(
                                 text = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         val c = try {
                                             Color(android.graphics.Color.parseColor(t.categoryColorHex))
-                                        } catch (_: Exception) { FlamePrimary }
+                                        } catch (_: Exception) { defaultColor }
                                         Box(
                                             modifier = Modifier
                                                 .size(10.dp)
@@ -224,7 +231,7 @@ fun CalendarAnalyticsScreen(
                     value = "${selectedStats?.completedThisWeek ?: 0}",
                     sub = "Days done",
                     icon = Icons.Default.DateRange,
-                    tint = FlameSecondary,
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
@@ -232,7 +239,7 @@ fun CalendarAnalyticsScreen(
                     value = "${selectedStats?.bestStreak ?: overallStats.bestOverallStreak}d",
                     sub = "Longest chain",
                     icon = Icons.Default.LocalFireDepartment,
-                    tint = FlamePrimary,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -270,6 +277,41 @@ fun CalendarAnalyticsScreen(
                 else logs.filter { it.taskId == selectedTask?.id }
             }
             MonthlyBarChart(logs = relevantLogs)
+        }
+
+        // Share Analytics Report Button
+        item {
+            OutlinedButton(
+                onClick = {
+                    val report = buildString {
+                        append("📊 Habit Progress Report:\n")
+                        append("Task: ${selectedTask?.title ?: "All Habits"}\n")
+                        selectedStats?.let {
+                            append("🔥 Current Streak: ${it.currentStreak} days\n")
+                            append("🏆 Best Streak: ${it.bestStreak} days\n")
+                            append("📈 Completion Rate: ${it.completionRate.toInt()}%\n")
+                            append("✅ Total Completed: ${it.totalCompletions} times\n")
+                        } ?: run {
+                            append("🔥 Total Completions: ${overallStats.totalCompletionsAllTime}\n")
+                            append("⚡ Active Habits: ${overallStats.totalActiveTasks}\n")
+                        }
+                        append("\nTracked with TaskStreak 🔥")
+                    }
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, report)
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Share Progress Report"))
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.share_progress_report))
+            }
         }
     }
 }

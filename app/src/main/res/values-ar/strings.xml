@@ -11,7 +11,8 @@
     <string name="nav_calendar">التقويم</string>
     <string name="nav_stats">الإحصائيات</string>
     <string name="nav_settings">الإعدادات</string>
-    <string name="nav_pomodoro">بومودورو</string>
+    <string name="nav_pomodoro">التركيز</string>
+    <string name="nav_badges">الأوسمة</string>
 
     <string name="today">اليوم</string>
     <string name="cancel">إلغاء</string>
@@ -20,9 +21,48 @@
     <string name="edit">تعديل</string>
     <string name="done">تم الإنجاز</string>
     <string name="snooze">تأجيل</string>
-    <string name="add_task">إضافة مهمة</string>
-    <string name="create_task">إنشاء عادة / مهمة جديدة</string>
-    <string name="edit_task">تعديل العادة / المهمة</string>
+    <string name="add_task">إضافة عادة</string>
+    <string name="create_task">إنشاء عادة جديدة</string>
+    <string name="edit_task">تعديل العادة</string>
+    <string name="shortcut_add_habit">إضافة عادة جديدة</string>
+    <string name="shortcut_start_pomodoro">بدء جلسة تركيز</string>
+    <string name="all_tasks">جميع العادات</string>
+    <string name="delete_task_confirm_title">تأكيد حذف العادة</string>
+    <string name="delete_task_confirm_message">هل أنت متأكد من حذف \"%1$s\"؟ سيتم حذف جميع سجلات السلسلة نهائياً.</string>
+    <string name="restore">استعادة</string>
+    <string name="skip">تخطي</string>
+    <string name="get_started">ابدأ الآن</string>
+    <string name="continue_text">متابعة</string>
+    <string name="share_progress">مشاركة الإنجازات</string>
+    <string name="share_progress_report">مشاركة تقرير الإنجاز</string>
+    <string name="share_streak_card">مشاركة بطاقة الإنجاز</string>
+    <string name="add_to_calendar">إضافة إلى تقويم النظام</string>
+    <string name="archive_habit">أرشفة العادة</string>
+    <string name="categories_title">التصنيفات</string>
+    <string name="habit_chains_title">سلاسل وتكديس العادات</string>
+    <string name="task_archive_title">أرشيف المهام</string>
+    <string name="habit_templates_title">قوالب العادات</string>
+    <string name="something_went_wrong">حدث خطأ غير متوقع</string>
+    <string name="error_recovery_msg">تم احتواء الخطأ بأمان. جميع بيانات عاداتك وسلاسل إنجازك محفوظة بالكامل.</string>
+    <string name="restart_app">إعادة تشغيل التطبيق</string>
+    <string name="copy_error_log">نسخ تفاصيل الخطأ</string>
+    <string name="copied">تم النسخ!</string>
+    <string name="send_test_notification">تجربة إرسال إشعار</string>
+    <string name="quiet_hours">ساعات الهدوء</string>
+    <string name="habit_organization">تنظيم العادات</string>
+    <string name="export_data">تصدير البيانات</string>
+    <string name="import_data">استيراد البيانات</string>
+    <string name="export_qr">تصدير رمز الاستجابة</string>
+    <string name="import_qr">مسح رمز الاستجابة</string>
+    <string name="qr_sync_title">المزامنة بدون إنترنت (رمز الاستجابة السريعة)</string>
+    <string name="calendar_analytics_title">التقويم والتحليلات</string>
+    <string name="calendar_analytics_sub">التقويم، الخريطة الحرارية، وتحليلات الاستمرارية</string>
+    <string name="achievements_title">الإنجازات</string>
+    <string name="achievements_sub">محطات وأوسمة لتعزيز استمرارية عاداتك</string>
+    <string name="sound_haptics">الصوت والاهتزاز</string>
+    <string name="reminders_title">التنبيهات والإشعارات</string>
+    <string name="appearance">المظهر</string>
+    <string name="accent_color_theme">لون السمة</string>
 
     <!-- Task Fields -->
     <string name="task_title">عنوان المهمة</string>
@@ -47,13 +87,13 @@
     <string name="theme_light">فاتح</string>
     <string name="theme_dark">داكن</string>
     <string name="color_theme">لوحة الألوان</string>
-    <string name="theme_flame">الشعلة (الافتراضي)</string>
+    <string name="theme_flame">تلقائي (أزرق / أحمر)</string>
     <string name="theme_forest">غابة خضراء</string>
     <string name="theme_ocean">محيط أزرق</string>
     <string name="theme_twilight">شفق بنفسجي</string>
     <string name="language">اللغة</string>
-    <string name="lang_system">لغة الجهاز الافتراضية</string>
-    <string name="lang_en">English</string>
+    <string name="lang_system">تلقائي حسب النظام</string>
+    <string name="lang_en">الإنجليزية</string>
     <string name="lang_ar">العربية</string>
     <string name="sound_effects">المؤثرات الصوتية</string>
     <string name="haptic_feedback">الاهتزاز التفاعلي</string>
@@ -62,6 +102,7 @@
 
     <!-- Backups -->
     <string name="backup_sync">النسخ الاحتياطي والمزامنة</string>
+    <string name="backup_restore">النسخ الاحتياطي والاستعادة</string>
     <string name="auto_backup_local">نسخ احتياطي تلقائي إلى التنزيلات</string>
     <string name="google_drive_backup">نسخ احتياطي عبر Google Drive</string>
     <string name="export_json">تصدير البيانات (JSON)</string>
@@ -75,4 +116,49 @@
     <string name="pomodoro_pause">إيقاف مؤقت</string>
     <string name="pomodoro_reset">إعادة ضبط</string>
     <string name="pomodoro_completed_sessions">الجلسات المكتملة</string>
+
+    <!-- Greetings -->
+    <string name="greeting_morning">صباح الخير</string>
+    <string name="greeting_morning_sub">صباح النشاط والهمة والإنجاز</string>
+    <string name="greeting_afternoon">مساء الخير</string>
+    <string name="greeting_afternoon_sub">مساء الإنجاز والتركيز العالي</string>
+    <string name="greeting_evening">مساء النور</string>
+    <string name="greeting_evening_sub">مساء الخير والتألق ومراجعة اليوم</string>
+    <string name="greeting_night">تصبح على خير</string>
+    <string name="greeting_night_sub">ليلة هادئة واستعداد ليوم غد</string>
+
+    <!-- Onboarding -->
+    <string name="onboard_title_1">ابنِ عادات تدوم للأبد</string>
+    <string name="onboard_desc_1">تابع عاداتك اليومية وحافظ على سلاسل الإنجاز مع دروع حماية العادات وإحصائيات متقدمة.</string>
+    <string name="onboard_title_2">ركز بذكاء مع تقنية البومودورو</string>
+    <string name="onboard_desc_2">جلسات تركيز عميق مع مؤقت بومودورو وأصوات طبيعية وموجات ألفا ثنائية الأذن.</string>
+    <string name="onboard_title_3">مدرب ذكاء اصطناعي وأمان كامل</string>
+    <string name="onboard_desc_3">اقتراحات ذكية لتحسين روتينك، مع نسخ احتياطي مشفر بالكامل ومزامنة سحابية خاصة بك.</string>
+
+    <!-- Heatmap & Stats -->
+    <string name="heatmap_done">تم</string>
+    <string name="heatmap_missed">فائت</string>
+    <string name="heatmap_today">اليوم</string>
+    <string name="heatmap_unscheduled">غير مجدول</string>
+
+    <!-- Additional Dialog & Screen strings -->
+    <string name="select_days_label">اختر أيام الأسبوع:</string>
+    <string name="reminder_time_optional">وقت التذكير (اختياري)</string>
+    <string name="task_notes_placeholder">ملاحظات (500 حرف كحد أقصى)</string>
+    <string name="prerequisite_task_label">مهمة تمهيدية (اختياري)</string>
+    <string name="none_no_dependency">بدون ارتباط</string>
+    <string name="none_no_prerequisite">بدون مهمة تسبقها</string>
+    <string name="save_changes">حفظ التغييرات</string>
+    <string name="type_habit">عادة مستمرة</string>
+    <string name="type_one_time">مهمة واحدة</string>
+    <string name="start_pomodoro">مؤقت بومودورو</string>
+    <string name="view_calendar">عرض التقويم</string>
+    <string name="new_category">تصنيف جديد</string>
+    <string name="category_name">اسم التصنيف</string>
+    <string name="pick_a_color">اختر لوناً:</string>
+    <string name="voice_input_title">إدخال صوتي</string>
+    <string name="restore_data">استعادة البيانات</string>
+    <string name="twelve_week_heatmap">نشاط الـ 12 أسبوع</string>
+    <string name="monthly_progress">الإنجاز الشهري (%1$s)</string>
+    <string name="productivity_insights">تحليلات الإنجاز</string>
 </resources>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="shortcut_add_task"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_add_habit"
+        android:shortcutLongLabel="@string/shortcut_add_habit">
+        <intent
+            android:action="com.abubakr.taskstreak.ACTION_ADD_TASK"
+            android:targetPackage="com.abubakr.taskstreak"
+            android:targetClass="com.abubakr.taskstreak.MainActivity" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_start_pomodoro"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_start_pomodoro"
+        android:shortcutLongLabel="@string/shortcut_start_pomodoro">
+        <intent
+            android:action="com.abubakr.taskstreak.ACTION_START_POMODORO"
+            android:targetPackage="com.abubakr.taskstreak"
+            android:targetClass="com.abubakr.taskstreak.MainActivity" />
+    </shortcut>
+</shortcuts>

@@ -45,14 +45,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.abubakr.taskstreak.R
 import com.abubakr.taskstreak.data.model.CategoryEntity
 import com.abubakr.taskstreak.data.model.RecurrenceType
 import com.abubakr.taskstreak.data.model.TaskEntity
-import com.abubakr.taskstreak.ui.theme.FlamePrimary
 import com.abubakr.taskstreak.util.DateUtils
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -61,12 +62,16 @@ import java.time.LocalDate
 fun TaskEditDialog(
     taskToEdit: TaskEntity?,
     categories: List<CategoryEntity>,
+    allOtherTasks: List<TaskEntity> = emptyList(),
     initialSubtasks: List<String> = emptyList(),
     onDismiss: () -> Unit,
     onSave: (TaskEntity) -> Unit,
     onSaveWithSubtasks: ((TaskEntity, List<String>) -> Unit)? = null
 ) {
     var title by remember { mutableStateOf(taskToEdit?.title ?: "") }
+    var isHabit by remember { mutableStateOf(taskToEdit?.isHabit ?: true) }
+    var blockedByTaskId by remember { mutableStateOf<Long?>(taskToEdit?.blockedByTaskId) }
+    var showPrerequisiteMenu by remember { mutableStateOf(false) }
     var selectedCategory by remember {
         mutableStateOf(taskToEdit?.category ?: (categories.firstOrNull()?.name ?: "General"))
     }
@@ -118,7 +123,7 @@ fun TaskEditDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (taskToEdit == null) "Add New Task / مهمة جديدة" else "Edit Task / تعديل المهمة",
+                        text = if (taskToEdit == null) stringResource(R.string.add_task) else stringResource(R.string.edit_task),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -136,7 +141,7 @@ fun TaskEditDialog(
                         title = it
                         if (it.isNotBlank()) titleError = false
                     },
-                    label = { Text("Task Name / اسم المهمة") },
+                    label = { Text(stringResource(R.string.task_title)) },
                     placeholder = { Text("e.g. Daily Reading, Exercise, Code...") },
                     isError = titleError,
                     supportingText = if (titleError) {
@@ -148,11 +153,44 @@ fun TaskEditDialog(
                         .testTag("task_title_input")
                 )
 
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Habit vs One-Time Task Toggle (Feature 20)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FilterChip(
+                        selected = isHabit,
+                        onClick = { isHabit = true },
+                        label = { Text("🔥 " + stringResource(R.string.type_habit)) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = Color.White
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = !isHabit,
+                        onClick = {
+                            isHabit = false
+                            recurrenceType = RecurrenceType.ONCE.name
+                        },
+                        label = { Text("✓ " + stringResource(R.string.type_one_time)) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = Color.White
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Category Selection
                 Text(
-                    text = "Category / التصنيف",
+                    text = stringResource(R.string.task_category),
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -170,10 +208,11 @@ fun TaskEditDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            val defaultColor = MaterialTheme.colorScheme.primary
                             val color = try {
                                 Color(android.graphics.Color.parseColor(selectedColorHex))
                             } catch (_: Exception) {
-                                FlamePrimary
+                                defaultColor
                             }
                             Box(
                                 modifier = Modifier
@@ -199,13 +238,14 @@ fun TaskEditDialog(
                         expanded = showCategoryMenu,
                         onDismissRequest = { showCategoryMenu = false }
                     ) {
+                        val defaultColor = MaterialTheme.colorScheme.primary
                         categories.forEach { cat ->
                             DropdownMenuItem(
                                 text = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         val c = try {
                                             Color(android.graphics.Color.parseColor(cat.colorHex))
-                                        } catch (_: Exception) { FlamePrimary }
+                                        } catch (_: Exception) { defaultColor }
                                         Box(
                                             modifier = Modifier
                                                 .size(14.dp)
@@ -230,7 +270,7 @@ fun TaskEditDialog(
 
                 // Recurrence Selector
                 Text(
-                    text = "Frequency / التكرار",
+                    text = stringResource(R.string.recurrence),
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -241,16 +281,16 @@ fun TaskEditDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     listOf(
-                        RecurrenceType.DAILY.name to "Daily / يومي",
-                        RecurrenceType.CUSTOM.name to "Custom / أيام محددة",
-                        RecurrenceType.ONCE.name to "Once / مرة واحدة"
+                        RecurrenceType.DAILY.name to stringResource(R.string.daily),
+                        RecurrenceType.CUSTOM.name to stringResource(R.string.custom_days),
+                        RecurrenceType.ONCE.name to stringResource(R.string.once)
                     ).forEach { (type, label) ->
                         FilterChip(
                             selected = recurrenceType == type,
                             onClick = { recurrenceType = type },
                             label = { Text(label, fontSize = 12.sp) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = FlamePrimary,
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = Color.White
                             ),
                             modifier = Modifier.weight(1f)
@@ -262,7 +302,7 @@ fun TaskEditDialog(
                 if (recurrenceType == RecurrenceType.CUSTOM.name) {
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Select Days / اختر أيام الأسبوع:",
+                        text = stringResource(R.string.select_days_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -289,7 +329,7 @@ fun TaskEditDialog(
                                     .size(38.dp)
                                     .clip(CircleShape)
                                     .background(
-                                        if (isSelected) FlamePrimary
+                                        if (isSelected) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.surfaceVariant
                                     )
                                     .clickable {
@@ -349,7 +389,7 @@ fun TaskEditDialog(
                 OutlinedTextField(
                     value = reminderTime,
                     onValueChange = { reminderTime = it },
-                    label = { Text("Reminder Time / وقت التذكير (Optional)") },
+                    label = { Text(stringResource(R.string.reminder_time_optional)) },
                     placeholder = { Text("e.g. 08:30 or 20:00") },
                     singleLine = true,
                     leadingIcon = {
@@ -366,7 +406,7 @@ fun TaskEditDialog(
                     onValueChange = {
                         if (it.length <= 500) note = it
                     },
-                    label = { Text("Task Notes / ملاحظات (Max 500 chars)") },
+                    label = { Text(stringResource(R.string.task_notes_placeholder)) },
                     placeholder = { Text("Add instructions, checklist notes, or links...") },
                     maxLines = 4,
                     supportingText = {
@@ -379,7 +419,7 @@ fun TaskEditDialog(
 
                 // Subtasks Section
                 Text(
-                    text = "Subtasks / المهام الفرعية",
+                    text = stringResource(R.string.subtasks),
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -405,9 +445,9 @@ fun TaskEditDialog(
                                 newSubtaskText = ""
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = FlamePrimary)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
-                        Text("Add")
+                        Text(stringResource(R.string.add_subtask))
                     }
                 }
 
@@ -469,6 +509,61 @@ fun TaskEditDialog(
                     }
                 }
 
+                // Prerequisite Task (Task Dependencies - Feature 18)
+                val eligibleBlockers = allOtherTasks.filter { it.id != taskToEdit?.id }
+                if (eligibleBlockers.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text = stringResource(R.string.prerequisite_task_label),
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    val blockerTitle = eligibleBlockers.find { it.id == blockedByTaskId }?.title ?: stringResource(R.string.none_no_dependency)
+                    Box {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable { showPrerequisiteMenu = true }
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = blockerTitle,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (blockedByTaskId != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                            Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp).clickable { blockedByTaskId = null })
+                        }
+
+                        DropdownMenu(
+                            expanded = showPrerequisiteMenu,
+                            onDismissRequest = { showPrerequisiteMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.none_no_prerequisite)) },
+                                onClick = {
+                                    blockedByTaskId = null
+                                    showPrerequisiteMenu = false
+                                }
+                            )
+                            eligibleBlockers.forEach { blk ->
+                                DropdownMenuItem(
+                                    text = { Text(blk.title) },
+                                    onClick = {
+                                        blockedByTaskId = blk.id
+                                        showPrerequisiteMenu = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // Action Buttons
@@ -478,7 +573,7 @@ fun TaskEditDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel / إلغاء")
+                        Text(stringResource(R.string.cancel))
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Button(
@@ -505,8 +600,8 @@ fun TaskEditDialog(
                                 note = if (note.isNotBlank()) note.trim() else null,
                                 autoCompleteWithSubtasks = autoCompleteWithSubtasks,
                                 pomodoroCount = taskToEdit?.pomodoroCount ?: 0,
-                                isHabit = taskToEdit?.isHabit ?: true,
-                                blockedByTaskId = taskToEdit?.blockedByTaskId,
+                                isHabit = isHabit,
+                                blockedByTaskId = blockedByTaskId,
                                 reminderDays = taskToEdit?.reminderDays
                             )
                             if (onSaveWithSubtasks != null) {
@@ -515,10 +610,10 @@ fun TaskEditDialog(
                                 onSave(task)
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = FlamePrimary),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         modifier = Modifier.testTag("task_save_button")
                     ) {
-                        Text(if (taskToEdit == null) "Create Task / إضافة" else "Save Changes / حفظ")
+                        Text(if (taskToEdit == null) stringResource(R.string.create_task) else stringResource(R.string.save_changes))
                     }
                 }
             }

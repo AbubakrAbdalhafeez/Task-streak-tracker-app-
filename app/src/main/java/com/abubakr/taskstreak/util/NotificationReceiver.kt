@@ -6,6 +6,12 @@ import android.content.Intent
 
 class NotificationReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        val prefs = com.abubakr.taskstreak.data.preferences.SettingsPreferences(context)
+        if (prefs.isQuietHoursNow()) {
+            // Suppress notifications during quiet hours
+            return
+        }
+
         val title = intent.getStringExtra("title") ?: "Streak Tracker"
         val message = intent.getStringExtra("message") ?: "Don't break your streak today! 🔥"
         val taskId = intent.getLongExtra("task_id", -1L)

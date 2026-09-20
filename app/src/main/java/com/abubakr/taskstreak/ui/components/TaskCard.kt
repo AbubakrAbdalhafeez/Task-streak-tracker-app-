@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckBox
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FlashOn
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -54,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -64,23 +68,38 @@ import com.abubakr.taskstreak.data.model.RecurrenceType
 import com.abubakr.taskstreak.data.model.SubtaskEntity
 import com.abubakr.taskstreak.data.model.TaskEntity
 import com.abubakr.taskstreak.ui.theme.DangerRed
-import com.abubakr.taskstreak.ui.theme.FlamePrimary
-import com.abubakr.taskstreak.ui.theme.FlameSecondary
 import com.abubakr.taskstreak.ui.theme.SuccessGreen
 import com.abubakr.taskstreak.util.TaskStreakStats
 import java.time.DayOfWeek
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TaskCard(
     task: TaskEntity,
     stats: TaskStreakStats?,
     subtasks: List<SubtaskEntity> = emptyList(),
+    isBlocked: Boolean = false,
+    blockerTitle: String? = null,
+    onBlockedClick: (() -> Unit)? = null,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onToggleSelect: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     onToggleDoneToday: () -> Unit,
     onEditTask: () -> Unit,
     onDeleteTask: () -> Unit,
     onViewCalendar: () -> Unit,
     onToggleSubtask: ((SubtaskEntity, Boolean) -> Unit)? = null,
     onStartPomodoro: (() -> Unit)? = null,
+    onArchiveTask: (() -> Unit)? = null,
+    onSyncCalendar: (() -> Unit)? = null,
+    onShareStreak: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -94,22 +113,33 @@ fun TaskCard(
     val completedSubs = subtasks.count { it.isCompleted }
     val totalSubs = subtasks.size
 
+    val defaultPrimaryColor = MaterialTheme.colorScheme.primary
+    val isArabic = LocalConfiguration.current.locales[0].language == "ar"
+
     val categoryColor = remember(task.categoryColorHex) {
         try {
             Color(android.graphics.Color.parseColor(task.categoryColorHex))
         } catch (e: Exception) {
-            FlamePrimary
+            defaultPrimaryColor
         }
     }
 
     val recurrenceLabel = when (task.recurrenceType) {
-        RecurrenceType.DAILY.name -> "Daily"
-        RecurrenceType.ONCE.name -> "Once (${task.startDate})"
+        RecurrenceType.DAILY.name -> if (isArabic) "يومياً" else "Daily"
+        RecurrenceType.ONCE.name -> if (isArabic) "مرة واحدة (${task.startDate})" else "Once (${task.startDate})"
         RecurrenceType.CUSTOM.name -> {
             val days = task.getParsedDaysOfWeek()
-            if (days.size == 7) "Daily"
+            if (days.size == 7) if (isArabic) "يومياً" else "Daily"
             else {
-                val dayNames = listOf(
+                val dayNames = if (isArabic) listOf(
+                    DayOfWeek.SUNDAY to "أحد",
+                    DayOfWeek.MONDAY to "إثنين",
+                    DayOfWeek.TUESDAY to "ثلاثاء",
+                    DayOfWeek.WEDNESDAY to "أربعاء",
+                    DayOfWeek.THURSDAY to "خميس",
+                    DayOfWeek.FRIDAY to "جمعة",
+                    DayOfWeek.SATURDAY to "سبت"
+                ) else listOf(
                     DayOfWeek.SUNDAY to "Sun",
                     DayOfWeek.MONDAY to "Mon",
                     DayOfWeek.TUESDAY to "Tue",
@@ -121,7 +151,7 @@ fun TaskCard(
                 dayNames.filter { it.first in days }.joinToString("·") { it.second }
             }
         }
-        else -> "Daily"
+        else -> if (isArabic) "يومياً" else "Daily"
     }
 
     val cardBg by animateColorAsState(
@@ -131,17 +161,33 @@ fun TaskCard(
         label = "card_bg"
     )
 
+    val selectionBorder = if (isSelected) androidx.compose.foundation.BorderStroke(
+        2.dp,
+        defaultPrimaryColor
+    ) else if (isDone) null else androidx.compose.foundation.BorderStroke(
+        1.dp,
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+    )
+
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .combinedClickable(
+                onClick = {
+                    if (isSelectionMode) onToggleSelect?.invoke()
+                },
+                onLongClick = {
+                    onLongClick?.invoke()
+                }
+            )
             .testTag("task_card_${task.id}"),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) defaultPrimaryColor.copy(alpha = 0.12f) else cardBg
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isDone) 0.dp else 2.dp),
-        border = if (isDone) null else androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-        )
+        border = selectionBorder
     ) {
         Column(
             modifier = Modifier
@@ -152,31 +198,63 @@ fun TaskCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Done Checkbox Button with strong tactile feel
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isDone) SuccessGreen
-                            else MaterialTheme.colorScheme.surfaceVariant
-                        )
-                        .border(
-                            width = if (isDone) 0.dp else 2.dp,
-                            color = if (isDone) Color.Transparent else categoryColor.copy(alpha = 0.6f),
-                            shape = CircleShape
-                        )
-                        .clickable { onToggleDoneToday() }
-                        .testTag("task_done_toggle_${task.id}"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isDone) {
+                if (isSelectionMode) {
+                    IconButton(
+                        onClick = { onToggleSelect?.invoke() },
+                        modifier = Modifier.size(44.dp)
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Completed",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
+                            imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                            contentDescription = if (isSelected) "Selected" else "Not selected",
+                            tint = if (isSelected) defaultPrimaryColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(28.dp)
                         )
+                    }
+                } else if (isBlocked) {
+                    // Blocked button
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                            .clickable { onBlockedClick?.invoke() }
+                            .testTag("task_blocked_toggle_${task.id}"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "Blocked",
+                            tint = DangerRed,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                } else {
+                    // Done Checkbox Button with strong tactile feel
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isDone) SuccessGreen
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .border(
+                                width = if (isDone) 0.dp else 2.dp,
+                                color = if (isDone) Color.Transparent else categoryColor.copy(alpha = 0.6f),
+                                shape = CircleShape
+                            )
+                            .clickable { onToggleDoneToday() }
+                            .testTag("task_done_toggle_${task.id}"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isDone) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Completed",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
 
@@ -195,6 +273,24 @@ fun TaskCard(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
+
+                    if (isBlocked && blockerTitle != null) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = DangerRed,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Blocked by: $blockerTitle",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = DangerRed
+                            )
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(4.dp))
 
@@ -326,17 +422,17 @@ fun TaskCard(
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Start Pomodoro / مؤقت بومودورو") },
+                            text = { Text(stringResource(R.string.start_pomodoro)) },
                             onClick = {
                                 showMenu = false
                                 onStartPomodoro?.invoke()
                             },
                             leadingIcon = {
-                                Icon(Icons.Default.Timer, contentDescription = null, tint = FlamePrimary)
+                                Icon(Icons.Default.Timer, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("View Calendar / التقويم") },
+                            text = { Text(stringResource(R.string.view_calendar)) },
                             onClick = {
                                 showMenu = false
                                 onViewCalendar()
@@ -346,7 +442,7 @@ fun TaskCard(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Edit Task / تعديل") },
+                            text = { Text(stringResource(R.string.edit_task)) },
                             onClick = {
                                 showMenu = false
                                 onEditTask()
@@ -356,7 +452,37 @@ fun TaskCard(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Delete / حذف", color = DangerRed) },
+                            text = { Text(stringResource(R.string.share_streak_card)) },
+                            onClick = {
+                                showMenu = false
+                                onShareStreak?.invoke()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Share, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.add_to_calendar)) },
+                            onClick = {
+                                showMenu = false
+                                onSyncCalendar?.invoke()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Event, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.archive_habit)) },
+                            onClick = {
+                                showMenu = false
+                                onArchiveTask?.invoke()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Archive, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.delete), color = DangerRed) },
                             onClick = {
                                 showMenu = false
                                 onDeleteTask()

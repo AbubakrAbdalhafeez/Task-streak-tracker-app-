@@ -2,14 +2,17 @@ package com.abubakr.taskstreak.data.repository
 
 import com.abubakr.taskstreak.data.db.CategoryDao
 import com.abubakr.taskstreak.data.db.CompletionLogDao
+import com.abubakr.taskstreak.data.db.HabitChainDao
 import com.abubakr.taskstreak.data.db.SubtaskDao
 import com.abubakr.taskstreak.data.db.TaskDao
 import com.abubakr.taskstreak.data.model.CategoryEntity
 import com.abubakr.taskstreak.data.model.CompletionLogEntity
+import com.abubakr.taskstreak.data.model.HabitChainEntity
 import com.abubakr.taskstreak.data.model.SubtaskEntity
 import com.abubakr.taskstreak.data.model.TaskEntity
 import com.abubakr.taskstreak.util.DateUtils
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -17,12 +20,23 @@ class StreakRepository(
     private val taskDao: TaskDao,
     private val logDao: CompletionLogDao,
     private val categoryDao: CategoryDao,
-    private val subtaskDao: SubtaskDao
+    private val subtaskDao: SubtaskDao,
+    private val habitChainDao: HabitChainDao? = null
 ) {
     val allActiveTasks: Flow<List<TaskEntity>> = taskDao.getAllActiveTasks()
+    val archivedTasks: Flow<List<TaskEntity>> = taskDao.getArchivedTasks()
     val allLogs: Flow<List<CompletionLogEntity>> = logDao.getAllLogs()
     val allCategories: Flow<List<CategoryEntity>> = categoryDao.getAllCategories()
     val allSubtasks: Flow<List<SubtaskEntity>> = subtaskDao.getAllSubtasks()
+    val allChains: Flow<List<HabitChainEntity>> = habitChainDao?.getAllChains() ?: flowOf(emptyList())
+
+    suspend fun archiveTask(id: Long) = taskDao.archiveTask(id)
+    suspend fun unarchiveTask(id: Long) = taskDao.unarchiveTask(id)
+    suspend fun deleteArchivedTasks() = taskDao.deleteArchivedTasks()
+
+    suspend fun insertChain(chain: HabitChainEntity): Long = habitChainDao?.insert(chain) ?: 0L
+    suspend fun updateChain(chain: HabitChainEntity) { habitChainDao?.update(chain) }
+    suspend fun deleteChain(id: Long) { habitChainDao?.deleteById(id) }
 
     fun getSubtasksForTask(taskId: Long): Flow<List<SubtaskEntity>> = subtaskDao.getSubtasksForTask(taskId)
     suspend fun getSubtasksForTaskDirect(taskId: Long): List<SubtaskEntity> = subtaskDao.getSubtasksForTaskDirect(taskId)
@@ -66,9 +80,30 @@ class StreakRepository(
         }
     }
 
-    suspend fun addCategory(category: CategoryEntity): Long = categoryDao.insert(category)
+    suspend fun bulkDeleteTasks(taskIds: List<Long>) {
+        for (id in taskIds) {
+            logDao.deleteForTask(id)
+            taskDao.deleteById(id)
+        }
+    }
 
+    suspend fun bulkSetCompletion(taskIds: List<Long>, date: String, completed: Boolean) {
+        for (id in taskIds) {
+            setTaskCompletion(id, date, completed)
+        }
+    }
+
+    suspend fun restoreTaskWithLogs(task: TaskEntity, dates: Set<String>) {
+        val newId = taskDao.insert(task.copy(id = 0))
+        for (d in dates) {
+            logDao.insert(CompletionLogEntity(taskId = newId, date = d))
+        }
+    }
+
+    suspend fun addCategory(category: CategoryEntity): Long = categoryDao.insert(category)
+    suspend fun updateCategory(category: CategoryEntity) = categoryDao.update(category)
     suspend fun deleteCategory(category: CategoryEntity) = categoryDao.delete(category)
+    suspend fun deleteCategoryByName(name: String) = categoryDao.deleteByName(name)
 
     suspend fun exportDataAsJson(): String {
         val tasks = taskDao.getAllTasksDirect()
@@ -140,7 +175,27 @@ class StreakRepository(
         return root.toString(2)
     }
 
-    suspend fun importDataFromJson(jsonString: String): Result<Int> {
+    suspend fun exportDesktopJson(): String {
+        val tasks = taskDao.getAllTasksDirect()
+        val subtasks = subtaskDao.getAllSubtasksDirect()
+        val logs = logDao.getAllLogsDirect()
+        val categories = categoryDao.getAllCategoriesDirect()
+        val chains = habitChainDao?.getAllChainsDirect() ?: emptyList()
+        return com.abubakr.taskstreak.util.DesktopSyncBridge.exportForDesktop(
+            tasks, subtasks, logs, categories, chains
+        )
+    }
+
+    suspend fun exportMarkdown(): String {
+        val tasks = taskDao.getAllTasksDirect()
+        return com.abubakr.taskstreak.util.DesktopSyncBridge.exportToMarkdown(tasks)
+    }
+
+    suspend fun importDataFromJson(
+        jsonString: String,
+        mergeMode: Boolean = false,
+        selectedTitles: Set<String>? = null
+    ): Result<Int> {
         return try {
             val root = JSONObject(jsonString)
             val tasksArray = root.optJSONArray("tasks") ?: JSONArray()
@@ -162,33 +217,45 @@ class StreakRepository(
                 categoryDao.insertAll(importedCategories)
             }
 
-            val importedTasks = mutableListOf<TaskEntity>()
+            val taskIdMap = mutableMapOf<Long, Long>() // oldTaskId -> newTaskId
+
+            var importedCount = 0
             for (i in 0 until tasksArray.length()) {
                 val tObj = tasksArray.getJSONObject(i)
-                importedTasks.add(
-                    TaskEntity(
-                        id = tObj.optLong("id", 0),
-                        title = tObj.getString("title"),
-                        category = tObj.optString("category", "General"),
-                        categoryColorHex = tObj.optString("categoryColorHex", "#FF6B35"),
-                        recurrenceType = tObj.optString("recurrenceType", "DAILY"),
-                        customDaysOfWeek = tObj.optString("customDaysOfWeek", "1,2,3,4,5,6,7"),
-                        startDate = tObj.optString("startDate", DateUtils.todayString()),
-                        endDate = if (tObj.isNull("endDate")) null else tObj.optString("endDate"),
-                        reminderTime = if (tObj.isNull("reminderTime")) null else tObj.optString("reminderTime"),
-                        createdAt = tObj.optLong("createdAt", System.currentTimeMillis()),
-                        isArchived = tObj.optBoolean("isArchived", false),
-                        note = if (tObj.isNull("note")) null else tObj.optString("note"),
-                        autoCompleteWithSubtasks = tObj.optBoolean("autoCompleteWithSubtasks", true),
-                        pomodoroCount = tObj.optInt("pomodoroCount", 0),
-                        isHabit = tObj.optBoolean("isHabit", true),
-                        blockedByTaskId = if (tObj.isNull("blockedByTaskId")) null else tObj.optLong("blockedByTaskId"),
-                        reminderDays = if (tObj.isNull("reminderDays")) null else tObj.optString("reminderDays")
-                    )
+                val title = tObj.getString("title")
+
+                if (selectedTitles != null && !selectedTitles.contains(title)) {
+                    continue
+                }
+
+                val oldId = tObj.optLong("id", 0)
+                val targetId = if (mergeMode) 0L else oldId
+
+                val task = TaskEntity(
+                    id = targetId,
+                    title = title,
+                    category = tObj.optString("category", "General"),
+                    categoryColorHex = tObj.optString("categoryColorHex", "#FF6B35"),
+                    recurrenceType = tObj.optString("recurrenceType", "DAILY"),
+                    customDaysOfWeek = tObj.optString("customDaysOfWeek", "1,2,3,4,5,6,7"),
+                    startDate = tObj.optString("startDate", DateUtils.todayString()),
+                    endDate = if (tObj.isNull("endDate")) null else tObj.optString("endDate"),
+                    reminderTime = if (tObj.isNull("reminderTime")) null else tObj.optString("reminderTime"),
+                    createdAt = tObj.optLong("createdAt", System.currentTimeMillis()),
+                    isArchived = tObj.optBoolean("isArchived", false),
+                    note = if (tObj.isNull("note")) null else tObj.optString("note"),
+                    autoCompleteWithSubtasks = tObj.optBoolean("autoCompleteWithSubtasks", true),
+                    pomodoroCount = tObj.optInt("pomodoroCount", 0),
+                    isHabit = tObj.optBoolean("isHabit", true),
+                    blockedByTaskId = if (tObj.isNull("blockedByTaskId")) null else tObj.optLong("blockedByTaskId"),
+                    reminderDays = if (tObj.isNull("reminderDays")) null else tObj.optString("reminderDays")
                 )
-            }
-            if (importedTasks.isNotEmpty()) {
-                taskDao.insertAll(importedTasks)
+
+                val newId = taskDao.insert(task)
+                if (oldId > 0) {
+                    taskIdMap[oldId] = newId
+                }
+                importedCount++
             }
 
             val subtasksArray = root.optJSONArray("subtasks")
@@ -196,10 +263,13 @@ class StreakRepository(
                 val importedSubtasks = mutableListOf<SubtaskEntity>()
                 for (i in 0 until subtasksArray.length()) {
                     val sObj = subtasksArray.getJSONObject(i)
+                    val oldTaskId = sObj.getLong("taskId")
+                    val mappedTaskId = if (mergeMode) taskIdMap[oldTaskId] ?: oldTaskId else oldTaskId
+
                     importedSubtasks.add(
                         SubtaskEntity(
-                            id = sObj.optLong("id", 0),
-                            taskId = sObj.getLong("taskId"),
+                            id = if (mergeMode) 0L else sObj.optLong("id", 0),
+                            taskId = mappedTaskId,
                             title = sObj.getString("title"),
                             isCompleted = sObj.optBoolean("isCompleted", false),
                             orderIndex = sObj.optInt("orderIndex", 0)
@@ -214,10 +284,13 @@ class StreakRepository(
             val importedLogs = mutableListOf<CompletionLogEntity>()
             for (i in 0 until logsArray.length()) {
                 val lObj = logsArray.getJSONObject(i)
+                val oldTaskId = lObj.getLong("taskId")
+                val mappedTaskId = if (mergeMode) taskIdMap[oldTaskId] ?: oldTaskId else oldTaskId
+
                 importedLogs.add(
                     CompletionLogEntity(
-                        id = lObj.optLong("id", 0),
-                        taskId = lObj.getLong("taskId"),
+                        id = if (mergeMode) 0L else lObj.optLong("id", 0),
+                        taskId = mappedTaskId,
                         date = lObj.getString("date"),
                         completedAt = lObj.optLong("completedAt", System.currentTimeMillis())
                     )
@@ -227,7 +300,7 @@ class StreakRepository(
                 logDao.insertAll(importedLogs)
             }
 
-            Result.success(importedTasks.size)
+            Result.success(importedCount)
         } catch (e: Exception) {
             Result.failure(e)
         }

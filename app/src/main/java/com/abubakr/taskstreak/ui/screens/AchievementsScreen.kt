@@ -21,6 +21,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
+import android.content.Intent
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,14 +41,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.abubakr.taskstreak.R
 import com.abubakr.taskstreak.data.model.Achievement
-import com.abubakr.taskstreak.ui.theme.FlamePrimary
-import com.abubakr.taskstreak.ui.theme.FlameSecondary
 import com.abubakr.taskstreak.ui.theme.SuccessGreen
 import com.abubakr.taskstreak.ui.viewmodel.StreakViewModel
 
@@ -52,6 +59,8 @@ fun AchievementsScreen(
     viewModel: StreakViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val isArabic = LocalConfiguration.current.locales[0].language == "ar"
     val achievements by viewModel.achievements.collectAsStateWithLifecycle()
     val unlockedCount = achievements.count { it.isUnlocked }
 
@@ -66,12 +75,12 @@ fun AchievementsScreen(
         item {
             Column {
                 Text(
-                    text = "Achievements / الإنجازات",
+                    text = stringResource(R.string.achievements_title),
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    text = "Milestones and badges to fuel your continuous streak",
+                    text = stringResource(R.string.achievements_sub),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -89,53 +98,76 @@ fun AchievementsScreen(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(FlameSecondary.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.EmojiEvents,
-                                contentDescription = "Trophy",
-                                tint = FlameSecondary,
-                                modifier = Modifier.size(28.dp)
-                            )
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.EmojiEvents,
+                                    contentDescription = "Trophy",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column {
+                                Text(
+                                    text = if (isArabic) "$unlockedCount من أصل ${achievements.size} مفتوح" else "$unlockedCount of ${achievements.size} Unlocked",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (unlockedCount == achievements.size) (if (isArabic) "بطل الاستمرارية! 👑" else "Master of consistency! 👑") else (if (isArabic) "واصل الحفاظ على عاداتك!" else "Keep crushing daily habits!"),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column {
+
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (unlockedCount > 0) SuccessGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
+                        ) {
                             Text(
-                                text = "$unlockedCount of ${achievements.size} Unlocked",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = if (unlockedCount == achievements.size) "Master of consistency! 👑" else "Keep crushing daily habits!",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = "${(unlockedCount.toFloat() / achievements.size.coerceAtLeast(1) * 100).toInt()}%",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = if (unlockedCount > 0) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                             )
                         }
                     }
 
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (unlockedCount > 0) SuccessGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
+                    OutlinedButton(
+                        onClick = {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    if (isArabic) "🏆 حققت $unlockedCount من ${achievements.size} إنجازات في تطبيق TaskStreak!" else "🏆 I have unlocked $unlockedCount of ${achievements.size} streak achievements on TaskStreak! Consistency flame burning bright 🔥"
+                                )
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share Achievement Progress"))
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(
-                            text = "${(unlockedCount.toFloat() / achievements.size.coerceAtLeast(1) * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                            color = if (unlockedCount > 0) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                        )
+                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.share_progress))
                     }
                 }
             }
@@ -143,7 +175,7 @@ fun AchievementsScreen(
 
         // Achievement Items
         items(achievements, key = { it.id }) { achievement ->
-            AchievementCard(achievement = achievement)
+            AchievementCard(achievement = achievement, isArabic = isArabic)
         }
     }
 }
@@ -151,8 +183,13 @@ fun AchievementsScreen(
 @Composable
 private fun AchievementCard(
     achievement: Achievement,
+    isArabic: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val localizedTitle = achievement.localizedTitle(isArabic)
+    val localizedDescription = achievement.localizedDescription(isArabic)
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -203,17 +240,40 @@ private fun AchievementCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = achievement.title,
+                            text = localizedTitle,
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         if (achievement.isUnlocked) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "Unlocked",
-                                tint = SuccessGreen,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = {
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(
+                                                Intent.EXTRA_TEXT,
+                                                "🏅 I just earned the \"$localizedTitle\" (${achievement.iconEmoji}) badge on TaskStreak! $localizedDescription 🔥"
+                                            )
+                                        }
+                                        context.startActivity(Intent.createChooser(shareIntent, "Share Badge"))
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Share,
+                                        contentDescription = "Share badge",
+                                        tint = primaryColor,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Unlocked",
+                                    tint = SuccessGreen,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Lock,
@@ -227,7 +287,7 @@ private fun AchievementCard(
                     Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
-                        text = achievement.description,
+                        text = localizedDescription,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -243,7 +303,7 @@ private fun AchievementCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp)),
-                color = if (achievement.isUnlocked) SuccessGreen else FlamePrimary,
+                color = if (achievement.isUnlocked) SuccessGreen else primaryColor,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = StrokeCap.Round
             )
@@ -255,7 +315,7 @@ private fun AchievementCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = if (achievement.isUnlocked) "Completed! 🎉" else "In Progress",
+                    text = if (achievement.isUnlocked) (if (isArabic) "مكتمل! 🎉" else "Completed! 🎉") else (if (isArabic) "قيد التقدم" else "In Progress"),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (achievement.isUnlocked) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant
                 )

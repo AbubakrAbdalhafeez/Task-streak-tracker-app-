@@ -33,13 +33,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abubakr.taskstreak.ui.theme.DangerRed
-import com.abubakr.taskstreak.ui.theme.FlamePrimary
-import com.abubakr.taskstreak.ui.theme.FlameSecondary
 import com.abubakr.taskstreak.ui.theme.SuccessGreen
 import com.abubakr.taskstreak.ui.theme.WarningOrange
 import com.abubakr.taskstreak.util.OverallStats
@@ -50,21 +49,38 @@ fun DynamicGreetingCard(
     overallStats: OverallStats,
     modifier: Modifier = Modifier
 ) {
+    val isArabic = LocalConfiguration.current.locales[0].language == "ar"
     val currentHour = LocalTime.now().hour
     val (greetingText, greetingSub, timeIcon) = when {
-        currentHour in 5..11 -> Triple("Good morning", "صباح النشاط والهمة", "☀️")
-        currentHour in 12..16 -> Triple("Good afternoon", "مساء الإنجاز والتركيز", "🌤️")
-        currentHour in 17..21 -> Triple("Good evening", "مساء الخير والتألق", "🌅")
-        else -> Triple("Good night", "ليلة هادئة واستعداد للغد", "🌙")
+        currentHour in 5..11 -> Triple(
+            if (isArabic) "صباح الخير" else "Good morning",
+            if (isArabic) "صباح النشاط والهمة" else "Ready for a productive day",
+            "☀️"
+        )
+        currentHour in 12..16 -> Triple(
+            if (isArabic) "مساء الخير" else "Good afternoon",
+            if (isArabic) "مساء الإنجاز والتركيز" else "Keep up the great momentum",
+            "🌤️"
+        )
+        currentHour in 17..21 -> Triple(
+            if (isArabic) "مساء الخير" else "Good evening",
+            if (isArabic) "مساء التألق والاسترخاء" else "Review your daily wins",
+            "🌅"
+        )
+        else -> Triple(
+            if (isArabic) "تصبح على خير" else "Good night",
+            if (isArabic) "ليلة هادئة واستعداد للغد" else "Rest well and recharge",
+            "🌙"
+        )
     }
 
     val pendingCount = (overallStats.totalScheduledTodayCount - overallStats.completedTodayCount).coerceAtLeast(0)
     val allCompletedToday = overallStats.totalScheduledTodayCount > 0 && pendingCount == 0
 
     val statusMessage = when {
-        overallStats.totalScheduledTodayCount == 0 -> "No scheduled tasks for today. Relax or plan ahead!"
-        allCompletedToday -> "Great job! All scheduled tasks finished! 🎉"
-        else -> "You have $pendingCount task${if (pendingCount > 1) "s" else ""} waiting today"
+        overallStats.totalScheduledTodayCount == 0 -> if (isArabic) "لا توجد مهام مجدولة لليوم. استرخِ أو خطط للمستقبل!" else "No scheduled tasks for today. Relax or plan ahead!"
+        allCompletedToday -> if (isArabic) "عمل رائع! تم إنجاز جميع مهام اليوم! 🎉" else "Great job! All scheduled tasks finished! 🎉"
+        else -> if (isArabic) "لديك $pendingCount من المهام المتبقية اليوم" else "You have $pendingCount task${if (pendingCount > 1) "s" else ""} waiting today"
     }
 
     val atRiskTasks = overallStats.activeTasksWithStreakAtRisk
@@ -125,8 +141,8 @@ fun DynamicGreetingCard(
                     if (overallStats.bestOverallStreak > 0) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = FlamePrimary.copy(alpha = 0.15f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, FlamePrimary.copy(alpha = 0.3f))
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -135,14 +151,14 @@ fun DynamicGreetingCard(
                                 Icon(
                                     imageVector = Icons.Default.LocalFireDepartment,
                                     contentDescription = "Streak",
-                                    tint = FlamePrimary,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "${overallStats.bestOverallStreak}d best",
+                                    text = "${overallStats.bestOverallStreak}${if (isArabic) " يوم كأفضل سلسلة" else "d best"}",
                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = FlamePrimary
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -185,9 +201,9 @@ fun DynamicGreetingCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "🔥 You're on fire! Keep the momentum going!",
+                            text = if (isArabic) "🔥 سلسلتك قوية ومشتعلة! حافظ على زخمك!" else "🔥 You're on fire! Keep the momentum going!",
                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = FlameSecondary
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -214,7 +230,7 @@ fun DynamicGreetingCard(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "⚠️ Streak at risk! \"${firstAtRisk.title}\" is waiting today!",
+                                text = if (isArabic) "⚠️ السلسلة معرضة للخطر! مهمة \"${firstAtRisk.title}\" بانتظارك اليوم!" else "⚠️ Streak at risk! \"${firstAtRisk.title}\" is waiting today!",
                                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
                                 color = DangerRed
                             )
