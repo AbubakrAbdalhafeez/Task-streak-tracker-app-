@@ -105,7 +105,7 @@ fun ArchiveScreen(
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
                     .testTag("archive_search_input"),
-                placeholder = { Text("Search archived tasks...") },
+                placeholder = { Text(stringResource(R.string.search_archived_tasks)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp)
@@ -127,7 +127,7 @@ fun ArchiveScreen(
                         )
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            if (searchQuery.isBlank()) "No archived tasks yet" else "No matching tasks found",
+                            if (searchQuery.isBlank()) stringResource(R.string.no_archived_tasks) else stringResource(R.string.no_matching_archived_tasks),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.outline
                         )

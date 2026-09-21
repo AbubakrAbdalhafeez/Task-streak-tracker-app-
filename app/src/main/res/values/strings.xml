@@ -178,4 +178,7 @@
     <string name="firebase_guest_user">Guest User (Anonymous)</string>
     <string name="firebase_not_signed_in">Not Signed In</string>
     <string name="firebase_sync_active">Cloud Sync Active</string>
+    <string name="no_archived_tasks">No archived habits yet</string>
+    <string name="no_matching_archived_tasks">No matching habits found</string>
+    <string name="search_archived_tasks">Search archived habits...</string>
 </resources>

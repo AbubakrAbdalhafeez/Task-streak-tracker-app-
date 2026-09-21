@@ -54,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abubakr.taskstreak.R
 import com.abubakr.taskstreak.data.model.CategoryEntity
+import com.abubakr.taskstreak.ui.components.EmptyStateType
+import com.abubakr.taskstreak.ui.components.StreakEmptyState
 import com.abubakr.taskstreak.ui.viewmodel.StreakViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -132,19 +134,26 @@ fun CategoryManagementScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                items(categories, key = { it.id }) { category ->
-                    val count = taskCountMap[category.name] ?: 0
-                    CategoryListItem(
-                        category = category,
-                        taskCount = count,
-                        onEdit = { categoryToEdit = category },
-                        onDelete = { categoryToDelete = category }
-                    )
+            if (categories.isEmpty()) {
+                StreakEmptyState(
+                    type = EmptyStateType.NO_CATEGORIES,
+                    onAction = { showAddDialog = true }
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    items(categories, key = { it.id }) { category ->
+                        val count = taskCountMap[category.name] ?: 0
+                        CategoryListItem(
+                            category = category,
+                            taskCount = count,
+                            onEdit = { categoryToEdit = category },
+                            onDelete = { categoryToDelete = category }
+                        )
+                    }
                 }
             }
         }
