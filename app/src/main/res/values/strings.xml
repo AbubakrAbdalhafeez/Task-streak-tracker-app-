@@ -160,4 +160,22 @@
     <string name="twelve_week_heatmap">12-Week Heatmap</string>
     <string name="monthly_progress">Monthly Progress (%1$s)</string>
     <string name="productivity_insights">Productivity Insights</string>
+
+    <!-- Firebase Auth Strings -->
+    <string name="firebase_auth_title">Account &amp; Cloud Sync</string>
+    <string name="firebase_auth_desc">Securely authenticate to sync your habits, streaks, and achievements across devices.</string>
+    <string name="firebase_sign_in_email">Sign In with Email</string>
+    <string name="firebase_sign_up">Create Account</string>
+    <string name="firebase_sign_in">Sign In</string>
+    <string name="firebase_sign_out">Sign Out</string>
+    <string name="firebase_anonymous">Continue as Guest</string>
+    <string name="firebase_forgot_password">Forgot Password?</string>
+    <string name="firebase_reset_password">Send Reset Email</string>
+    <string name="firebase_email_label">Email Address</string>
+    <string name="firebase_password_label">Password</string>
+    <string name="firebase_display_name_label">Display Name</string>
+    <string name="firebase_signed_in_as">Signed in as</string>
+    <string name="firebase_guest_user">Guest User (Anonymous)</string>
+    <string name="firebase_not_signed_in">Not Signed In</string>
+    <string name="firebase_sync_active">Cloud Sync Active</string>
 </resources>

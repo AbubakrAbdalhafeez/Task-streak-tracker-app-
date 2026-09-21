@@ -58,6 +58,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
+import com.abubakr.taskstreak.R
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -335,14 +337,14 @@ fun TaskCard(
                                 Icon(
                                     imageVector = Icons.Default.Notifications,
                                     contentDescription = null,
-                                    tint = FlameSecondary,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Spacer(modifier = Modifier.width(2.dp))
                                 Text(
                                     text = task.reminderTime,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = FlameSecondary
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -352,12 +354,12 @@ fun TaskCard(
                             Spacer(modifier = Modifier.width(6.dp))
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
-                                color = FlamePrimary.copy(alpha = 0.12f)
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                             ) {
                                 Text(
                                     text = "🍅 x ${task.pomodoroCount}",
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = FlamePrimary,
+                                    color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                 )
                             }
@@ -571,14 +573,14 @@ fun TaskCard(
                     Icon(
                         imageVector = Icons.Default.LocalFireDepartment,
                         contentDescription = "Current streak",
-                        tint = if (currentStreak > 0) FlamePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = if (currentStreak > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(3.dp))
                     Text(
-                        text = "$currentStreak day${if (currentStreak == 1) "" else "s"}",
+                        text = if (isArabic) "$currentStreak ${if (currentStreak == 1) "يوم" else "أيام"}" else "$currentStreak day${if (currentStreak == 1) "" else "s"}",
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                        color = if (currentStreak > 0) FlamePrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (currentStreak > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -587,12 +589,12 @@ fun TaskCard(
                     Icon(
                         imageVector = Icons.Default.FlashOn,
                         contentDescription = "Best streak",
-                        tint = FlameSecondary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
-                        text = "Best: $bestStreak",
+                        text = if (isArabic) "الأفضل: $bestStreak" else "Best: $bestStreak",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

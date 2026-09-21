@@ -186,7 +186,7 @@ fun MonthlyBarChart(
                                 fontSize = 9.sp,
                                 fontWeight = if (isCurrentMonth) FontWeight.Bold else FontWeight.Normal
                             ),
-                            color = if (isCurrentMonth) FlamePrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = if (isCurrentMonth) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
                     }

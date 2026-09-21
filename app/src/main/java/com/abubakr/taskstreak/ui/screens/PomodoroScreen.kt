@@ -310,7 +310,7 @@ fun PomodoroScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                     )
-                } {
+                ) {
                     Icon(
                         imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = null,

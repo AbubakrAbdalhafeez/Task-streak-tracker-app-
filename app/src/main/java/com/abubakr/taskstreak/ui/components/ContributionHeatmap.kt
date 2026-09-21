@@ -175,7 +175,7 @@ fun ContributionHeatmap(
                                     .then(
                                         if (isToday) Modifier.border(
                                             1.5.dp,
-                                            FlamePrimary,
+                                            MaterialTheme.colorScheme.primary,
                                             RoundedCornerShape(3.5.dp)
                                         )
                                         else Modifier

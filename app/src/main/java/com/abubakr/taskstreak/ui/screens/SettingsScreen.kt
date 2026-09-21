@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Info
@@ -49,6 +50,7 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Share
@@ -95,6 +97,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.abubakr.taskstreak.data.drive.DriveSyncState
 import com.abubakr.taskstreak.ui.components.AddCategoryDialog
+import com.abubakr.taskstreak.ui.components.AuthDialogMode
+import com.abubakr.taskstreak.ui.components.FirebaseAuthDialog
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.res.stringResource
+import com.abubakr.taskstreak.R
+import com.abubakr.taskstreak.ui.theme.DarkModeRed
+import com.abubakr.taskstreak.ui.theme.LightModeBlue
 import com.abubakr.taskstreak.ui.theme.DangerRed
 import com.abubakr.taskstreak.ui.theme.InfoBlue
 import com.abubakr.taskstreak.ui.theme.SuccessGreen
@@ -178,6 +187,12 @@ fun SettingsScreen(
     var showImportDialog by remember { mutableStateOf(false) }
     var importInputText by remember { mutableStateOf("") }
     var showAddCategoryDialog by remember { mutableStateOf(false) }
+    var showFirebaseAuthDialog by remember { mutableStateOf(false) }
+    var authDialogMode by remember { mutableStateOf(AuthDialogMode.SIGN_IN) }
+
+    val currentAuthUser by viewModel.currentAuthUser.collectAsStateWithLifecycle()
+    val authActionLoading by viewModel.authActionLoading.collectAsStateWithLifecycle()
+    val authErrorMessage by viewModel.authErrorMessage.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = modifier
@@ -655,24 +670,70 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    if (driveUserEmail == null) {
+                    if (driveUserEmail == null && currentAuthUser == null) {
                         // User not signed in
-                        Button(
-                            onClick = {
-                                googleSignInLauncher.launch(viewModel.driveManager.getSignInIntent())
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("drive_sign_in_button"),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            shape = RoundedCornerShape(12.dp)
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Icons.Default.AccountCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Sign in with Google")
+                            Button(
+                                onClick = {
+                                    googleSignInLauncher.launch(viewModel.driveManager.getSignInIntent())
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("drive_sign_in_button"),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.AccountCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Sign in with Google")
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        viewModel.clearAuthErrorMessage()
+                                        authDialogMode = AuthDialogMode.SIGN_IN
+                                        showFirebaseAuthDialog = true
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("auth_email_button"),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(stringResource(R.string.firebase_sign_in), style = MaterialTheme.typography.labelMedium)
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        viewModel.clearAuthErrorMessage()
+                                        authDialogMode = AuthDialogMode.SIGN_UP
+                                        showFirebaseAuthDialog = true
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("auth_signup_button"),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(stringResource(R.string.firebase_sign_up), style = MaterialTheme.typography.labelMedium)
+                                }
+                            }
                         }
                     } else {
                         // User signed in
+                        val effectiveEmail = driveUserEmail ?: currentAuthUser?.email
+                        val effectiveName = driveUserName ?: currentAuthUser?.displayName ?: if (currentAuthUser?.isAnonymous == true) stringResource(R.string.firebase_guest_user) else "Authenticated User"
+                        val effectivePhoto = driveUserPhoto ?: currentAuthUser?.photoUrl
+
                         Surface(
                             shape = RoundedCornerShape(14.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -684,9 +745,9 @@ fun SettingsScreen(
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                if (driveUserPhoto != null) {
+                                if (effectivePhoto != null) {
                                     AsyncImage(
-                                        model = driveUserPhoto,
+                                        model = effectivePhoto,
                                         contentDescription = "User Photo",
                                         modifier = Modifier
                                             .size(40.dp)
@@ -714,19 +775,23 @@ fun SettingsScreen(
 
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = driveUserName ?: "Google User",
+                                        text = effectiveName,
                                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = driveUserEmail.orEmpty(),
+                                        text = effectiveEmail ?: "Firebase Account",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
 
                                 IconButton(
-                                    onClick = { viewModel.signOutFromDrive() },
+                                    onClick = {
+                                        viewModel.signOutFromDrive()
+                                        viewModel.signOutFromAuth()
+                                        Toast.makeText(context, "Signed out", Toast.LENGTH_SHORT).show()
+                                    },
                                     modifier = Modifier.testTag("drive_sign_out_button")
                                 ) {
                                     Icon(
@@ -1393,6 +1458,42 @@ fun SettingsScreen(
                     Toast.makeText(context, if (success) "Sync successful! ✅" else "Sync error: $msg", Toast.LENGTH_LONG).show()
                 }
             }
+        )
+    }
+
+    // Firebase Auth Dialog
+    if (showFirebaseAuthDialog) {
+        FirebaseAuthDialog(
+            initialMode = authDialogMode,
+            onDismiss = {
+                showFirebaseAuthDialog = false
+                viewModel.clearAuthErrorMessage()
+            },
+            onSignInWithEmail = { email, pass ->
+                viewModel.signInWithEmail(email, pass) { msg ->
+                    showFirebaseAuthDialog = false
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
+            },
+            onSignUpWithEmail = { email, pass, displayName ->
+                viewModel.signUpWithEmail(email, pass, displayName) { msg ->
+                    showFirebaseAuthDialog = false
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
+            },
+            onSendPasswordReset = { email ->
+                viewModel.sendPasswordReset(email) { msg ->
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                }
+            },
+            onSignInAnonymously = {
+                viewModel.signInAnonymously { msg ->
+                    showFirebaseAuthDialog = false
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
+            },
+            isLoading = authActionLoading,
+            errorMessage = authErrorMessage
         )
     }
 }

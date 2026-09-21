@@ -161,4 +161,22 @@
     <string name="twelve_week_heatmap">نشاط الـ 12 أسبوع</string>
     <string name="monthly_progress">الإنجاز الشهري (%1$s)</string>
     <string name="productivity_insights">تحليلات الإنجاز</string>
+
+    <!-- Firebase Auth Strings -->
+    <string name="firebase_auth_title">الحساب والمزامنة السحابية</string>
+    <string name="firebase_auth_desc">سجّل دخولك لحفظ سلاسل عاداتك وإنجازاتك والمزامنة الآمنة عبر أجهزتك.</string>
+    <string name="firebase_sign_in_email">تسجيل بالبريد الإلكتروني</string>
+    <string name="firebase_sign_up">إنشاء حساب جديد</string>
+    <string name="firebase_sign_in">تسجيل الدخول</string>
+    <string name="firebase_sign_out">تسجيل الخروج</string>
+    <string name="firebase_anonymous">المتابعة كضيف</string>
+    <string name="firebase_forgot_password">نسيت كلمة المرور؟</string>
+    <string name="firebase_reset_password">إرسال رابط الاستعادة</string>
+    <string name="firebase_email_label">البريد الإلكتروني</string>
+    <string name="firebase_password_label">كلمة المرور</string>
+    <string name="firebase_display_name_label">الاسم المعروض</string>
+    <string name="firebase_signed_in_as">مسجل الدخول باسم</string>
+    <string name="firebase_guest_user">مستخدم ضيف (مجهول)</string>
+    <string name="firebase_not_signed_in">غير مسجل الدخول</string>
+    <string name="firebase_sync_active">المزامنة السحابية مفعّلة</string>
 </resources>

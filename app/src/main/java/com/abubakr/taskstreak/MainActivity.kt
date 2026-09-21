@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -79,6 +80,7 @@ class MainActivity : ComponentActivity() {
             CompositionLocalProvider(
                 LocalConfiguration provides localizedConfig,
                 LocalContext provides localizedContext,
+                LocalActivityResultRegistryOwner provides this@MainActivity,
                 LocalLayoutDirection provides if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
             ) {
                 TaskStreakTheme(themePreference = themeMode, colorPalette = colorPalette) {

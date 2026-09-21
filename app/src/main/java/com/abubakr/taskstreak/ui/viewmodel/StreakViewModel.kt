@@ -3,6 +3,9 @@ package com.abubakr.taskstreak.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.abubakr.taskstreak.data.auth.AuthResult
+import com.abubakr.taskstreak.data.auth.AuthUserState
+import com.abubakr.taskstreak.data.auth.FirebaseAuthManager
 import com.abubakr.taskstreak.data.db.AppDatabase
 import com.abubakr.taskstreak.data.drive.DriveSyncState
 import com.abubakr.taskstreak.data.drive.DriveSyncWorker
@@ -421,8 +424,97 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     val driveManager = GoogleDriveManager(application)
+    val authManager = FirebaseAuthManager(application)
+
+    val currentAuthUser: StateFlow<AuthUserState?> = authManager.currentUserFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), authManager.getCurrentUser())
+
     private val _driveSyncState = MutableStateFlow<DriveSyncState>(DriveSyncState.Idle)
     val driveSyncState: StateFlow<DriveSyncState> = _driveSyncState.asStateFlow()
+
+    private val _authActionLoading = MutableStateFlow(false)
+    val authActionLoading: StateFlow<Boolean> = _authActionLoading.asStateFlow()
+
+    private val _authErrorMessage = MutableStateFlow<String?>(null)
+    val authErrorMessage: StateFlow<String?> = _authErrorMessage.asStateFlow()
+
+    fun clearAuthErrorMessage() {
+        _authErrorMessage.value = null
+    }
+
+    fun signInWithEmail(email: String, pass: String, onSuccess: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            _authActionLoading.value = true
+            _authErrorMessage.value = null
+            when (val res = authManager.signInWithEmail(email, pass)) {
+                is AuthResult.Success -> {
+                    _authActionLoading.value = false
+                    preferences.setDriveUserInfo(res.user.email, res.user.displayName, res.user.photoUrl)
+                    onSuccess(res.message)
+                }
+                is AuthResult.Error -> {
+                    _authActionLoading.value = false
+                    _authErrorMessage.value = res.message
+                }
+            }
+        }
+    }
+
+    fun signUpWithEmail(email: String, pass: String, displayName: String, onSuccess: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            _authActionLoading.value = true
+            _authErrorMessage.value = null
+            when (val res = authManager.signUpWithEmail(email, pass, displayName)) {
+                is AuthResult.Success -> {
+                    _authActionLoading.value = false
+                    preferences.setDriveUserInfo(res.user.email, displayName.ifBlank { res.user.displayName }, res.user.photoUrl)
+                    onSuccess(res.message)
+                }
+                is AuthResult.Error -> {
+                    _authActionLoading.value = false
+                    _authErrorMessage.value = res.message
+                }
+            }
+        }
+    }
+
+    fun signInAnonymously(onSuccess: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            _authActionLoading.value = true
+            _authErrorMessage.value = null
+            when (val res = authManager.signInAnonymously()) {
+                is AuthResult.Success -> {
+                    _authActionLoading.value = false
+                    onSuccess(res.message)
+                }
+                is AuthResult.Error -> {
+                    _authActionLoading.value = false
+                    _authErrorMessage.value = res.message
+                }
+            }
+        }
+    }
+
+    fun sendPasswordReset(email: String, onSuccess: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            _authActionLoading.value = true
+            _authErrorMessage.value = null
+            when (val res = authManager.sendPasswordResetEmail(email)) {
+                is AuthResult.Success -> {
+                    _authActionLoading.value = false
+                    onSuccess(res.message)
+                }
+                is AuthResult.Error -> {
+                    _authActionLoading.value = false
+                    _authErrorMessage.value = res.message
+                }
+            }
+        }
+    }
+
+    fun signOutFromAuth() {
+        authManager.signOut()
+    }
 
     init {
         // Schedule periodic 30-minute widget updates and refresh on launch
@@ -455,6 +547,9 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
             account.displayName,
             account.photoUrl?.toString()
         )
+        viewModelScope.launch {
+            authManager.signInWithGoogleAccount(account)
+        }
         _driveSyncState.value = DriveSyncState.Synced("Connected as ${account.displayName ?: account.email}")
         if (preferences.driveAutoSync.value) {
             DriveSyncWorker.scheduleAutoSync(getApplication())
@@ -465,6 +560,7 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _driveSyncState.value = DriveSyncState.Syncing
             driveManager.signOut()
+            authManager.signOut()
             preferences.clearDriveUserInfo()
             DriveSyncWorker.cancelAutoSync(getApplication())
             _driveSyncState.value = DriveSyncState.Idle
