@@ -38,6 +38,9 @@ interface SubtaskDao {
     @Query("DELETE FROM subtasks WHERE taskId = :taskId")
     suspend fun deleteSubtasksForTask(taskId: Long)
 
+    @Query("DELETE FROM subtasks")
+    suspend fun deleteAllSubtasks()
+
     @Query("UPDATE subtasks SET isCompleted = :isCompleted WHERE id = :id")
     suspend fun setSubtaskCompleted(id: Long, isCompleted: Boolean)
 }

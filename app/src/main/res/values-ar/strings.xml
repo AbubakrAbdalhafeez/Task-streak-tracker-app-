@@ -182,4 +182,118 @@
     <string name="no_archived_tasks">لا توجد عادات مؤرشفة حتى الآن</string>
     <string name="no_matching_archived_tasks">لا توجد عادات مطابقة للبحث</string>
     <string name="search_archived_tasks">البحث في العادات المؤرشفة...</string>
+
+    <!-- Danger Zone Strings -->
+    <string name="danger_zone">منطقة الخطر</string>
+    <string name="danger_zone_desc">إعادة ضبط أو حذف جميع العادات وسجلات السلاسل ونقاط الخبرة نهائياً.</string>
+    <string name="reset_sample_data">إعادة تعيين للعادات النموذجية</string>
+    <string name="reset_sample_data_desc">استرجاع العادات الأولية وسجلات السلاسل التجريبية.</string>
+    <string name="clear_all_data">مسح جميع البيانات</string>
+    <string name="clear_all_data_desc">حذف كافة العادات وسجلات الإنجاز وجلسات التركيز ونقاط الخبرة بالكامل.</string>
+    <string name="clear_data_confirm_title">هل تريد مسح جميع البيانات؟</string>
+    <string name="clear_data_confirm_message">هل أنت متأكد من رغبتك في حذف كافة العادات وسجلات الإنجاز؟ لا يمكن التراجع عن هذا الإجراء.</string>
+    <string name="reset_sample_confirm_title">استعادة العادات النموذجية؟</string>
+    <string name="reset_sample_confirm_message">سيؤدي هذا إلى استبدال عاداتك الحالية بالعادات النموذجية الافتراضية.</string>
+
+    <!-- Habit Chains -->
+    <string name="chain_bonus_subtitle">اربط عاداتك المتتالية واحصل على +50 نقطة خبرة إضافية</string>
+    <string name="chain_empty_title">لم يتم إنشاء سلاسل عادات بعد</string>
+    <string name="chain_empty_desc">اربط عاداتك بتتابع منطقي (مثال: الاستيقاظ ➔ شرب الماء ➔ التمدد).\nأنجزها بالتسلسل للحصول على نقاط خبرة مضاعفة!</string>
+    <string name="create_chain">إنشاء سلسلة عادات</string>
+    <string name="chain_title_label">عنوان السلسلة</string>
+    <string name="chain_desc_label">الوصف (اختياري)</string>
+    <string name="chain_select_habits">اختر العادات بالترتيب</string>
+    <string name="chain_bonus_xp">مكافأة نقاط الخبرة</string>
+    <string name="delete_chain_confirm_title">حذف سلسلة العادات؟</string>
+    <string name="delete_chain_confirm_message">هل أنت متأكد من رغبتك في حذف هذه السلسلة؟</string>
+
+    <!-- Community & Hub -->
+    <string name="community_hub_title">مركز التواصل والذكاء</string>
+    <string name="tab_ai_coach">مدرب الذكاء 🤖</string>
+    <string name="tab_team_habits">عادات الفريق 👥</string>
+    <string name="tab_marketplace">المتجر 🛍️</string>
+    <string name="tab_health_sync">مزامنة الصحة 🏃</string>
+    <string name="ai_coach_header_title">مدرب العادات الذكي المخصص</string>
+    <string name="ai_coach_header_desc">تحليل أنماط التزامك وزخم سلاسل إنجازك.</string>
+    <string name="ai_coach_match">توافق %1$d%%</string>
+    <string name="team_members_checkin">تسجيل إنجاز الأعضاء اليوم:</string>
+    <string name="team_streak_badge">🔥 %1$d أيام سلسلة الفريق</string>
+    <string name="btn_check_off_today">تسجيل إنجاز اليوم</string>
+    <string name="btn_chat">المحادثة (%1$d)</string>
+    <string name="chat_placeholder">شجع زملاءك في الفريق...</string>
+    <string name="import_marketplace_btn">استيراد قالب العادة (%1$d تنزيل)</string>
+    <string name="health_sync_title">Google Fit وHealth Connect</string>
+    <string name="health_sync_desc">إنجاز عادات اللياقة تلقائياً عبر قياس الخطوات المباشر.</string>
+    <string name="steps_today">خطوات اليوم</string>
+    <string name="steps_progress">%1$s / %2$s خطوة</string>
+    <string name="active_time">وقت النشاط</string>
+    <string name="sleep_duration">مدة النوم</string>
+    <string name="health_auto_check_hint">⚡ العادات التي تحتوي على \'مشي\'، \'رياضة\'، أو \'تمارين\' سيتم إنجازها تلقائياً عند تحقيق الهدف اليومي.</string>
+
+    <!-- Advanced Backup & Sync -->
+    <string name="advanced_backup_title">النسخ الاحتياطي المتقدم ومزامنة الأجهزة</string>
+    <string name="import_restore_title">استيراد واستعادة البيانات</string>
+    <string name="merge_data_title">دمج مع البيانات الحالية</string>
+    <string name="merge_data_on_desc">الاحتفاظ بالعادات الحالية وإضافة المستوردة</string>
+    <string name="merge_data_off_desc">استبدال وتحديث العادات المتطابقة</string>
+    <string name="select_backup_file">اختر ملف JSON للاستيراد</string>
+    <string name="multi_platform_title">المزامنة عبر المنصات وسطح المكتب</string>
+    <string name="multi_platform_desc">تصدير عاداتك وسلاسل إنجازك لتطبيقات سطح المكتب أو برامج الملاحظات (Obsidian, Notion)</string>
+    <string name="export_markdown_notes">تصدير سجل يومي بتنسيق Markdown</string>
+    <string name="export_desktop_json">تصدير ملف المزامنة لسطح المكتب</string>
+    <string name="local_backups_found">النسخ الاحتياطية المحلية الموجودة</string>
+    <string name="no_backups_found">لم يتم العثور على نسخ احتياطية في مجلد التنزيلات</string>
+    <string name="btn_restore">استعادة</string>
+    <string name="btn_share">مشاركة</string>
+    <string name="preview_dialog_title">معاينة محتوى النسخة الاحتياطية</string>
+    <string name="copy_to_clipboard">نسخ إلى الحافظة</string>
+
+    <!-- Calendar Analytics -->
+    <string name="stat_completion">نسبة الإنجاز</string>
+    <string name="stat_scheduled_days">أيام مجدولة</string>
+    <string name="stat_completions">مرات الإنجاز</string>
+    <string name="stat_total_done">الإجمالي المنجز</string>
+    <string name="stat_this_week">هذا الأسبوع</string>
+    <string name="stat_days_done">أيام تم إنجازها</string>
+    <string name="stat_best_streak">أفضل سلسلة</string>
+    <string name="stat_longest_chain">أطول مسار متواصل</string>
+    <string name="calendar_tap_hint">اضغط على اليوم أو الأيام السابقة لتسجيل الإنجاز</string>
+    <string name="heatmap_consistency_sub">مخطط تكرار الالتزام الأسبوعي على مدار 12 أسبوعاً</string>
+    <string name="chart_breakdown_sub">تفصيل إنجاز المهام على مدار 12 شهراً</string>
+    <string name="chart_total_suffix">إجمالي</string>
+    <string name="select_task_prompt">اختر عادة</string>
+    <string name="all_habits_label">جميع العادات</string>
+
+    <!-- Archive & Clear -->
+    <string name="clear_archive_title">مسح جميع المهام المؤرشفة؟</string>
+    <string name="clear_archive_message">سيتم حذف جميع المهام المؤرشفة (%1$d) وسجلات إنجازها نهائياً. لا يمكن التراجع عن هذا الإجراء.</string>
+    <string name="delete_all">حذف الكل</string>
+    <string name="archived_count_label">%1$d مهام مؤرشفة</string>
+
+    <!-- Notifications & Actions -->
+    <string name="notif_view_today">عرض مهام اليوم</string>
+    <string name="notif_skip_today">تخطي اليوم</string>
+    <string name="notif_done">✓ تم الإنجاز</string>
+    <string name="notif_snooze">تأجيل ساعة</string>
+    <string name="notif_open">فتح التطبيق</string>
+    <string name="notif_time_for">حان موعد \"%1$s\"! 🔥</string>
+    <string name="notif_morning_title">أهداف اليوم والملخص الصباحي ☀️</string>
+    <string name="notif_morning_msg">جاهز لتحقيق أهدافك اليوم؟ لا تكسر سلسلتك! 🔥</string>
+    <string name="template_picker_sub">اختر قالباً جاهزاً ومثبتاً للبدء فوراً:</string>
+    <string name="reminder_prefix">التنبيه: %1$s</string>
+    <string name="templates_btn_label">القوالب</string>
+
+    <!-- Additional Advanced Backup Strings -->
+    <string name="backup_confirm_import_title">تأكيد الاستيراد</string>
+    <string name="backup_import_merge_msg">الاستيراد بنمط الدمج: ستتم إضافة العادات ونقاط الإنجاز الجديدة إلى بياناتك الحالية دون حذف أي شيء.</string>
+    <string name="backup_import_replace_msg">الاستيراد بنمط الاستبدال: سيتم تحديث العادات المتطابقة ببيانات النسخة الاحتياطية.</string>
+    <string name="btn_import_now">استيراد الآن</string>
+    <string name="backup_history_title">سجل النسخ الاحتياطية المحلية (التنزيلات)</string>
+    <string name="backup_history_empty">لم يتم العثور على نسخ احتياطية في مجلد التنزيلات حتى الآن. فعّل النسخ التلقائي في الإعدادات لإنشاء لقطات أسبوعية.</string>
+    <string name="copied_to_clipboard">تم النسخ إلى الحافظة!</string>
+    <string name="btn_copy">نسخ</string>
+    <string name="desktop_companion_json">ملف JSON لسطح المكتب</string>
+    <string name="obsidian_markdown">ملاحظات Markdown (Obsidian / Notion)</string>
+    <string name="desktop_json_label">JSON لسطح المكتب</string>
+    <string name="markdown_label">Markdown</string>
 </resources>

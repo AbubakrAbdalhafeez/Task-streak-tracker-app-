@@ -17,12 +17,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DirectionsRun
-import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
@@ -55,14 +54,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.abubakr.taskstreak.R
 import com.abubakr.taskstreak.data.marketplace.HabitMarketplaceRepository
-import com.abubakr.taskstreak.data.marketplace.MarketplaceHabit
 import com.abubakr.taskstreak.data.model.TaskEntity
 import com.abubakr.taskstreak.data.social.GroupHabitRepository
-import com.abubakr.taskstreak.data.social.SharedGroupHabit
 import com.abubakr.taskstreak.ui.theme.InfoBlue
 import com.abubakr.taskstreak.ui.theme.SuccessGreen
 import com.abubakr.taskstreak.ui.viewmodel.StreakViewModel
@@ -75,21 +75,27 @@ fun CommunityHubScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isArabic = LocalConfiguration.current.locales[0].language == "ar"
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("AI Coach 🤖", "Team Habits 👥", "Marketplace 🛍️", "Health Sync 🏃")
+    val tabTitles = listOf(
+        stringResource(R.string.tab_ai_coach),
+        stringResource(R.string.tab_team_habits),
+        stringResource(R.string.tab_marketplace),
+        stringResource(R.string.tab_health_sync)
+    )
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Social & Intelligence Hub",
+                        text = stringResource(R.string.community_hub_title),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -108,7 +114,7 @@ fun CommunityHubScreen(
                 edgePadding = 16.dp,
                 containerColor = MaterialTheme.colorScheme.surface
             ) {
-                tabs.forEachIndexed { index, title ->
+                tabTitles.forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
@@ -124,25 +130,27 @@ fun CommunityHubScreen(
             }
 
             when (selectedTab) {
-                0 -> AiCoachTab(viewModel = viewModel)
-                1 -> TeamHabitsTab(viewModel = viewModel)
-                2 -> MarketplaceTab(viewModel = viewModel)
-                3 -> HealthSyncTab(viewModel = viewModel)
+                0 -> AiCoachTab(viewModel = viewModel, isArabic = isArabic)
+                1 -> TeamHabitsTab(viewModel = viewModel, isArabic = isArabic)
+                2 -> MarketplaceTab(viewModel = viewModel, isArabic = isArabic)
+                3 -> HealthSyncTab(viewModel = viewModel, isArabic = isArabic)
             }
         }
     }
 }
 
 @Composable
-private fun AiCoachTab(viewModel: StreakViewModel) {
-    val tasks = viewModel.tasks.value
-    val statsMap = viewModel.taskStatsMap.value
-    val insights = remember(tasks, statsMap) {
+private fun AiCoachTab(viewModel: StreakViewModel, isArabic: Boolean) {
+    val tasks by viewModel.tasks.collectAsStateWithLifecycle()
+    val taskStatsMap by viewModel.taskStatsMap.collectAsStateWithLifecycle()
+    val insights by viewModel.aiInsights.collectAsStateWithLifecycle()
+
+    val advices = remember(tasks, taskStatsMap, insights, isArabic) {
         AiCoachEngine.generateCoachingInsights(
             tasks = tasks,
-            taskStats = statsMap,
-            peakHours = "08:00 - 10:00",
-            bestDay = "Monday"
+            taskStats = taskStatsMap,
+            peakHours = insights.peakFocusHourRange,
+            bestDay = insights.mostConsistentDayOfWeek
         )
     }
 
@@ -154,28 +162,29 @@ private fun AiCoachTab(viewModel: StreakViewModel) {
     ) {
         item {
             Card(
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        Icons.Default.AutoAwesome,
+                        imageVector = Icons.Default.AutoAwesome,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(36.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Personalized AI Habit Coach",
+                            text = stringResource(R.string.ai_coach_header_title),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "Analyzing your completion patterns and streak momentum.",
+                            text = stringResource(R.string.ai_coach_header_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -184,7 +193,7 @@ private fun AiCoachTab(viewModel: StreakViewModel) {
             }
         }
 
-        items(insights) { advice ->
+        items(advices) { advice ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -197,16 +206,17 @@ private fun AiCoachTab(viewModel: StreakViewModel) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = advice.title,
+                            text = advice.localizedTitle(isArabic),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
                         )
                         Card(
                             colors = CardDefaults.cardColors(containerColor = SuccessGreen.copy(alpha = 0.15f)),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                text = "${(advice.confidenceScore * 100).toInt()}% match",
+                                text = stringResource(R.string.ai_coach_match, (advice.confidenceScore * 100).toInt()),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = SuccessGreen,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -214,24 +224,11 @@ private fun AiCoachTab(viewModel: StreakViewModel) {
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = advice.titleAr,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = advice.tip,
+                        text = advice.localizedTip(isArabic),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = advice.tipAr,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -242,7 +239,7 @@ private fun AiCoachTab(viewModel: StreakViewModel) {
                         Icon(Icons.Default.Lightbulb, contentDescription = null, tint = InfoBlue, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = advice.actionSuggestion,
+                            text = advice.localizedActionSuggestion(isArabic),
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             color = InfoBlue
                         )
@@ -254,8 +251,7 @@ private fun AiCoachTab(viewModel: StreakViewModel) {
 }
 
 @Composable
-private fun TeamHabitsTab(viewModel: StreakViewModel) {
-    val isArabic = LocalConfiguration.current.locales[0].language == "ar"
+private fun TeamHabitsTab(viewModel: StreakViewModel, isArabic: Boolean) {
     var habits by remember { mutableStateOf(GroupHabitRepository.getGroupHabits()) }
     var chatInput by remember { mutableStateOf("") }
     var selectedGroup by remember { mutableStateOf(habits.firstOrNull()) }
@@ -281,13 +277,13 @@ private fun TeamHabitsTab(viewModel: StreakViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = group.localizedTitle(isArabic),
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                             )
                             Text(
-                                text = group.teamName,
+                                text = group.localizedTeamName(isArabic),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = InfoBlue
                             )
@@ -297,7 +293,7 @@ private fun TeamHabitsTab(viewModel: StreakViewModel) {
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text(
-                                text = "🔥 ${group.groupStreakDays}d Team Streak",
+                                text = stringResource(R.string.team_streak_badge, group.groupStreakDays),
                                 color = Color.White,
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -307,14 +303,14 @@ private fun TeamHabitsTab(viewModel: StreakViewModel) {
 
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = group.description,
+                        text = group.localizedDescription(isArabic),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
                     Text(
-                        text = "Members Check-in Today:",
+                        text = stringResource(R.string.team_members_checkin),
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                     )
                     Spacer(modifier = Modifier.height(6.dp))
@@ -345,7 +341,7 @@ private fun TeamHabitsTab(viewModel: StreakViewModel) {
                                     }
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = member.name.substringBefore(" "),
+                                        text = member.localizedName(isArabic).substringBefore(" "),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium
                                     )
@@ -370,13 +366,13 @@ private fun TeamHabitsTab(viewModel: StreakViewModel) {
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
                         ) {
-                            Text("Check Off Today", fontSize = 12.sp)
+                            Text(stringResource(R.string.btn_check_off_today), fontSize = 12.sp)
                         }
 
                         TextButton(onClick = { selectedGroup = group }) {
                             Icon(Icons.Default.Chat, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Chat (${group.chatMessages.size})", fontSize = 12.sp)
+                            Text(stringResource(R.string.btn_chat, group.chatMessages.size), fontSize = 12.sp)
                         }
                     }
 
@@ -392,7 +388,7 @@ private fun TeamHabitsTab(viewModel: StreakViewModel) {
                         ) {
                             group.chatMessages.takeLast(3).forEach { msg ->
                                 Text(
-                                    text = "${msg.senderName}: ${msg.message}",
+                                    text = "${msg.localizedSender(isArabic)}: ${msg.localizedMessage(isArabic)}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = if (msg.isCelebration) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
@@ -405,7 +401,7 @@ private fun TeamHabitsTab(viewModel: StreakViewModel) {
                                 OutlinedTextField(
                                     value = chatInput,
                                     onValueChange = { chatInput = it },
-                                    placeholder = { Text("Encourage your team...", fontSize = 12.sp) },
+                                    placeholder = { Text(stringResource(R.string.chat_placeholder), fontSize = 12.sp) },
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(10.dp)
                                 )
@@ -413,7 +409,7 @@ private fun TeamHabitsTab(viewModel: StreakViewModel) {
                                 IconButton(
                                     onClick = {
                                         if (chatInput.isNotBlank()) {
-                                            GroupHabitRepository.addChatMessage(group.id, chatInput)
+                                            GroupHabitRepository.addChatMessage(group.id, chatInput, isArabic)
                                             habits = GroupHabitRepository.getGroupHabits()
                                             chatInput = ""
                                         }
@@ -431,7 +427,7 @@ private fun TeamHabitsTab(viewModel: StreakViewModel) {
 }
 
 @Composable
-private fun MarketplaceTab(viewModel: StreakViewModel) {
+private fun MarketplaceTab(viewModel: StreakViewModel, isArabic: Boolean) {
     val templates = remember { HabitMarketplaceRepository.getMarketplaceHabits() }
 
     LazyColumn(
@@ -452,18 +448,13 @@ private fun MarketplaceTab(viewModel: StreakViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = habit.title,
+                                text = habit.localizedTitle(isArabic),
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                             )
                             Text(
-                                text = habit.titleAr,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = "By ${habit.author}",
+                                text = if (isArabic) "بواسطة ${habit.localizedAuthor(isArabic)}" else "By ${habit.localizedAuthor(isArabic)}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -481,13 +472,13 @@ private fun MarketplaceTab(viewModel: StreakViewModel) {
 
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = habit.description,
+                        text = habit.localizedDescription(isArabic),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
-                    habit.benefits.forEach { benefit ->
+                    habit.localizedBenefits(isArabic).forEach { benefit ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("✓ ", color = SuccessGreen, fontWeight = FontWeight.Bold)
                             Text(benefit, style = MaterialTheme.typography.bodySmall)
@@ -498,11 +489,11 @@ private fun MarketplaceTab(viewModel: StreakViewModel) {
                     Button(
                         onClick = {
                             val newTask = TaskEntity(
-                                title = habit.title,
-                                category = habit.category,
+                                title = habit.localizedTitle(isArabic),
+                                category = habit.localizedCategory(isArabic),
                                 recurrenceType = "DAILY",
                                 reminderTime = habit.suggestedReminder,
-                                note = habit.description,
+                                note = habit.localizedDescription(isArabic),
                                 isHabit = true
                             )
                             viewModel.saveTask(newTask)
@@ -513,7 +504,7 @@ private fun MarketplaceTab(viewModel: StreakViewModel) {
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Import Habit Template (${habit.downloads} installs)")
+                        Text(stringResource(R.string.import_marketplace_btn, habit.downloads))
                     }
                 }
             }
@@ -522,7 +513,7 @@ private fun MarketplaceTab(viewModel: StreakViewModel) {
 }
 
 @Composable
-private fun HealthSyncTab(viewModel: StreakViewModel) {
+private fun HealthSyncTab(viewModel: StreakViewModel, isArabic: Boolean) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -536,11 +527,11 @@ private fun HealthSyncTab(viewModel: StreakViewModel) {
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "Google Fit & Health Connect",
+                        text = stringResource(R.string.health_sync_title),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                     Text(
-                        text = "Auto-complete fitness habits with live pedometer telemetry.",
+                        text = stringResource(R.string.health_sync_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -554,8 +545,8 @@ private fun HealthSyncTab(viewModel: StreakViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Steps Today", style = MaterialTheme.typography.bodyMedium)
-                Text("6,420 / 10,000 steps", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.steps_today), style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.steps_progress, "6,420", "10,000"), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
             Spacer(modifier = Modifier.height(6.dp))
             LinearProgressIndicator(
@@ -578,8 +569,8 @@ private fun HealthSyncTab(viewModel: StreakViewModel) {
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text("Active Time", style = MaterialTheme.typography.labelSmall)
-                        Text("42 mins", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = InfoBlue)
+                        Text(stringResource(R.string.active_time), style = MaterialTheme.typography.labelSmall)
+                        Text(if (isArabic) "42 دقيقة" else "42 mins", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = InfoBlue)
                     }
                 }
                 Card(
@@ -588,8 +579,8 @@ private fun HealthSyncTab(viewModel: StreakViewModel) {
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text("Sleep Duration", style = MaterialTheme.typography.labelSmall)
-                        Text("7.5 hrs", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = SuccessGreen)
+                        Text(stringResource(R.string.sleep_duration), style = MaterialTheme.typography.labelSmall)
+                        Text(if (isArabic) "7.5 ساعة" else "7.5 hrs", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = SuccessGreen)
                     }
                 }
             }
@@ -597,7 +588,7 @@ private fun HealthSyncTab(viewModel: StreakViewModel) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "⚡ Habits with 'walk', 'steps', or 'workout' in their name will auto-check off once daily goals are reached.",
+                text = stringResource(R.string.health_auto_check_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

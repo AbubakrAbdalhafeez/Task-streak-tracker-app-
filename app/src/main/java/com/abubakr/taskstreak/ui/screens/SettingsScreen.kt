@@ -1,10 +1,12 @@
 package com.abubakr.taskstreak.ui.screens
 
+import android.app.TimePickerDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import com.abubakr.taskstreak.util.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudSync
@@ -45,6 +48,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Logout
@@ -126,6 +130,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val isArabic = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language == "ar"
     val themeMode by viewModel.preferences.themeMode.collectAsStateWithLifecycle()
     val dailyGoal by viewModel.preferences.dailyGoal.collectAsStateWithLifecycle()
     val morningReminderEnabled by viewModel.preferences.morningReminderEnabled.collectAsStateWithLifecycle()
@@ -161,8 +166,15 @@ fun SettingsScreen(
             val account = task.getResult(ApiException::class.java)
             if (account != null) {
                 viewModel.onGoogleSignInSuccess(account)
-                Toast.makeText(context, "Connected to Google Drive!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Connected as ${account.email}", Toast.LENGTH_SHORT).show()
             }
+        } catch (e: ApiException) {
+            val msg = when (e.statusCode) {
+                10 -> "Configuration error (Code 10): Ensure SHA-1 fingerprint is added in Firebase console."
+                12500 -> "Sign-in error (12500): Check Google Play Services and Google Auth provider."
+                else -> "Sign-in failed (Code ${e.statusCode}): ${e.message}"
+            }
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(context, "Sign in failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
@@ -189,6 +201,8 @@ fun SettingsScreen(
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var showFirebaseAuthDialog by remember { mutableStateOf(false) }
     var authDialogMode by remember { mutableStateOf(AuthDialogMode.SIGN_IN) }
+    var showClearAllConfirmDialog by remember { mutableStateOf(false) }
+    var showResetSampleConfirmDialog by remember { mutableStateOf(false) }
 
     val currentAuthUser by viewModel.currentAuthUser.collectAsStateWithLifecycle()
     val authActionLoading by viewModel.authActionLoading.collectAsStateWithLifecycle()
@@ -303,35 +317,126 @@ fun SettingsScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    Text(
-                        text = stringResource(R.string.language),
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Language,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isArabic) "لغة التطبيق (Language)" else "App Language",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        listOf(
-                            Pair("SYSTEM", stringResource(R.string.lang_system)),
-                            Pair("en", stringResource(R.string.lang_en)),
-                            Pair("ar", stringResource(R.string.lang_ar))
-                        ).forEach { (code, name) ->
-                            FilterChip(
-                                selected = appLanguage == code,
-                                onClick = { viewModel.preferences.setAppLanguage(code) },
-                                label = { Text(name, fontSize = 11.sp) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = Color.White
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
+                        // English option
+                        val isEnSelected = appLanguage == "en"
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isEnSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                if (isEnSelected) 1.5.dp else 1.dp,
+                                if (isEnSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable {
+                                    if (appLanguage != "en") {
+                                        viewModel.preferences.setAppLanguage("en")
+                                    }
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "English",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = if (isEnSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "English UI",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (isEnSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Arabic option
+                        val isArSelected = appLanguage == "ar"
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isArSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                if (isArSelected) 1.5.dp else 1.dp,
+                                if (isArSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable {
+                                    if (appLanguage != "ar") {
+                                        viewModel.preferences.setAppLanguage("ar")
+                                    }
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "العربية",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = if (isArSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "واجهة عربية",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (isArSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -459,12 +564,13 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Daily Morning Reminder",
+                                text = if (isArabic) "التنبيه اليومي" else "Daily Overview Reminder",
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Get notified every morning at $morningReminderTime",
+                                text = if (isArabic) "إشعار يومي في ${DateUtils.formatTime12Hour(morningReminderTime, isArabic)}"
+                                else "Get notified daily at ${DateUtils.formatTime12Hour(morningReminderTime, isArabic)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -479,22 +585,54 @@ fun SettingsScreen(
                     if (morningReminderEnabled) {
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Time setting
+                        // Time setting with any time of day
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            listOf("07:00", "08:00", "09:00", "10:00").forEach { time ->
+                            listOf("08:00", "09:00", "10:00").forEach { time ->
                                 FilterChip(
                                     selected = morningReminderTime == time,
                                     onClick = { viewModel.setMorningReminderTime(time) },
-                                    label = { Text(time) },
+                                    label = { Text(DateUtils.formatTime12Hour(time, isArabic)) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = MaterialTheme.colorScheme.primary,
                                         selectedLabelColor = Color.White
                                     )
                                 )
                             }
+
+                            val isCustom = morningReminderTime !in listOf("08:00", "09:00", "10:00")
+                            FilterChip(
+                                selected = isCustom,
+                                onClick = {
+                                    val parts = morningReminderTime.split(":")
+                                    val initialH = parts.getOrNull(0)?.trim()?.toIntOrNull() ?: 8
+                                    val initialM = parts.getOrNull(1)?.trim()?.toIntOrNull() ?: 0
+                                    TimePickerDialog(
+                                        context,
+                                        { _, hourOfDay, minute ->
+                                            viewModel.setMorningReminderTime(
+                                                String.format(java.util.Locale.US, "%02d:%02d", hourOfDay, minute)
+                                            )
+                                        },
+                                        initialH,
+                                        initialM,
+                                        false
+                                    ).show()
+                                },
+                                label = {
+                                    Text(
+                                        if (isCustom) DateUtils.formatTime12Hour(morningReminderTime, isArabic)
+                                        else if (isArabic) "مخصص ⏰" else "Custom ⏰"
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -1288,6 +1426,97 @@ fun SettingsScreen(
             }
         }
 
+        // Section: Danger Zone (Clear All Data & Reset)
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("settings_danger_zone_card"),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = DangerRed.copy(alpha = 0.08f)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, DangerRed.copy(alpha = 0.3f))
+            ) {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = DangerRed,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = stringResource(R.string.danger_zone),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = DangerRed
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.danger_zone_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Reset to Starter Habits Button
+                    OutlinedButton(
+                        onClick = { showResetSampleConfirmDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("btn_reset_sample_data"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.reset_sample_data),
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+                            )
+                            Text(
+                                text = stringResource(R.string.reset_sample_data_desc),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Clear All Data Button
+                    Button(
+                        onClick = { showClearAllConfirmDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("btn_clear_all_data"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.clear_all_data),
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White
+                            )
+                            Text(
+                                text = stringResource(R.string.clear_all_data_desc),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.85f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Section: About
         item {
             Card(
@@ -1355,7 +1584,10 @@ fun SettingsScreen(
                                 type = "application/json"
                                 putExtra(Intent.EXTRA_TEXT, exportedJsonText)
                             }
-                            context.startActivity(Intent.createChooser(shareIntent, "Export Streak Backup"))
+                            val chooser = Intent.createChooser(shareIntent, "Export Streak Backup").apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(chooser)
                             showExportDialog = false
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = InfoBlue)
@@ -1494,6 +1726,98 @@ fun SettingsScreen(
             },
             isLoading = authActionLoading,
             errorMessage = authErrorMessage
+        )
+    }
+
+    // Confirmation Dialog: Clear All Data
+    if (showClearAllConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearAllConfirmDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.ErrorOutline,
+                    contentDescription = null,
+                    tint = DangerRed,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.clear_data_confirm_title),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.clear_data_confirm_message),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showClearAllConfirmDialog = false
+                        viewModel.clearAllAppData {
+                            Toast.makeText(context, "All data has been cleared!", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DangerRed),
+                    modifier = Modifier.testTag("btn_confirm_clear_all")
+                ) {
+                    Text(stringResource(R.string.clear_all_data), color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearAllConfirmDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    // Confirmation Dialog: Reset to Sample Habits
+    if (showResetSampleConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetSampleConfirmDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Sync,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.reset_sample_confirm_title),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.reset_sample_confirm_message),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showResetSampleConfirmDialog = false
+                        viewModel.resetDataToDefaults {
+                            Toast.makeText(context, "Reset to starter habits!", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.testTag("btn_confirm_reset_sample")
+                ) {
+                    Text(stringResource(R.string.reset_sample_data))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetSampleConfirmDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
         )
     }
 }

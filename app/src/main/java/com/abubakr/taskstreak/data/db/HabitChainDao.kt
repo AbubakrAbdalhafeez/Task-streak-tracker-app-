@@ -31,4 +31,7 @@ interface HabitChainDao {
 
     @Query("DELETE FROM habit_chains WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("DELETE FROM habit_chains")
+    suspend fun deleteAllChains()
 }

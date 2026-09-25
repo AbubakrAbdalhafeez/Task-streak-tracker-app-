@@ -21,7 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
-import android.content.Intent
+import com.abubakr.taskstreak.util.SocialShareHelper
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -151,14 +151,14 @@ fun AchievementsScreen(
 
                     OutlinedButton(
                         onClick = {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(
-                                    Intent.EXTRA_TEXT,
-                                    if (isArabic) "🏆 حققت $unlockedCount من ${achievements.size} إنجازات في تطبيق TaskStreak!" else "🏆 I have unlocked $unlockedCount of ${achievements.size} streak achievements on TaskStreak! Consistency flame burning bright 🔥"
-                                )
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share Achievement Progress"))
+                            val title = if (isArabic) "إنجازات TaskStreak" else "TaskStreak Progress"
+                            val desc = if (isArabic) "حققت $unlockedCount من ${achievements.size} إنجازات في رحلة العادات الإيجابية!" else "Unlocked $unlockedCount of ${achievements.size} achievements on TaskStreak!"
+                            SocialShareHelper.shareAchievement(
+                                context = context,
+                                title = title,
+                                description = desc,
+                                emoji = "🏆"
+                            )
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -248,14 +248,12 @@ private fun AchievementCard(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(
                                     onClick = {
-                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                            type = "text/plain"
-                                            putExtra(
-                                                Intent.EXTRA_TEXT,
-                                                "🏅 I just earned the \"$localizedTitle\" (${achievement.iconEmoji}) badge on TaskStreak! $localizedDescription 🔥"
-                                            )
-                                        }
-                                        context.startActivity(Intent.createChooser(shareIntent, "Share Badge"))
+                                        SocialShareHelper.shareAchievement(
+                                            context = context,
+                                            title = localizedTitle,
+                                            description = localizedDescription,
+                                            emoji = achievement.iconEmoji
+                                        )
                                     },
                                     modifier = Modifier.size(28.dp)
                                 ) {

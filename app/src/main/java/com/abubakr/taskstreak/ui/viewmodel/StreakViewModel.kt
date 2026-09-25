@@ -38,6 +38,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import com.abubakr.taskstreak.data.model.FocusSessionMode
+import com.abubakr.taskstreak.data.model.FocusAutoStartType
+import com.abubakr.taskstreak.data.model.FocusSessionStatus
+import com.abubakr.taskstreak.data.model.FocusRecord
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -137,6 +143,16 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
     val statusFilter = MutableStateFlow("ALL") // ALL, PENDING, COMPLETED
     val typeFilter = MutableStateFlow("ALL")     // ALL, HABIT, TASK
     val sortOption = MutableStateFlow("DEFAULT") // DEFAULT, STREAK, NAME, RECENT
+    val selectedTimeframe = MutableStateFlow(com.abubakr.taskstreak.util.TimeframeFilter.TODAY)
+    val taskInternalFilter = MutableStateFlow(com.abubakr.taskstreak.util.TaskInternalFilter.ALL_STATUS)
+
+    fun setTimeframe(filter: com.abubakr.taskstreak.util.TimeframeFilter) {
+        selectedTimeframe.value = filter
+    }
+
+    fun setInternalFilter(filter: com.abubakr.taskstreak.util.TaskInternalFilter) {
+        taskInternalFilter.value = filter
+    }
 
     // Bulk selection state
     val isSelectionMode = MutableStateFlow(false)
@@ -225,6 +241,75 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun clearAllAppData(onComplete: () -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.clearAllDatabaseData()
+            preferences.resetAllGamificationAndHistory()
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+            withContext(Dispatchers.Main) {
+                onComplete()
+            }
+        }
+    }
+
+    fun resetDataToDefaults(onComplete: () -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.clearAllDatabaseData()
+            preferences.resetAllGamificationAndHistory()
+
+            // Seed default tasks and completion logs
+            val today = LocalDate.now()
+            val twoWeeksAgo = today.minusDays(14).toString()
+
+            val task1 = TaskEntity(
+                id = 0,
+                title = "Daily Workout & Movement",
+                category = "Fitness",
+                categoryColorHex = "#10B981",
+                recurrenceType = "DAILY",
+                startDate = twoWeeksAgo,
+                reminderTime = "07:30"
+            )
+            val task2 = TaskEntity(
+                id = 0,
+                title = "English Reading (15 mins)",
+                category = "English",
+                categoryColorHex = "#8B5CF6",
+                recurrenceType = "DAILY",
+                startDate = twoWeeksAgo,
+                reminderTime = "19:00"
+            )
+            val task3 = TaskEntity(
+                id = 0,
+                title = "Study & Code Practice",
+                category = "Study",
+                categoryColorHex = "#3B82F6",
+                recurrenceType = "CUSTOM",
+                customDaysOfWeek = "1,2,3,4,5",
+                startDate = twoWeeksAgo,
+                reminderTime = "20:00"
+            )
+
+            val id1 = repository.insertTask(task1)
+            val id2 = repository.insertTask(task2)
+            repository.insertTask(task3)
+
+            for (i in 1..6) {
+                repository.toggleTaskCompletion(id1, today.minusDays(i.toLong()).toString())
+            }
+            for (i in 1..3) {
+                repository.toggleTaskCompletion(id2, today.minusDays(i.toLong()).toString())
+            }
+
+            preferences.addXp(120L)
+
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+            withContext(Dispatchers.Main) {
+                onComplete()
+            }
+        }
+    }
+
     fun getDailyQuote(): Pair<String, String> {
         val quotes = listOf(
             "We are what we repeatedly do. Excellence, then, is not an act, but a habit." to "Aristotle",
@@ -276,10 +361,68 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
 
     fun saveTask(task: TaskEntity) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (task.id == 0L) {
+            val taskId = if (task.id == 0L) {
                 repository.insertTask(task)
             } else {
                 repository.updateTask(task)
+                task.id
+            }
+            val finalTask = task.copy(id = taskId)
+            if (finalTask.reminderTime.isNullOrBlank() || finalTask.isArchived) {
+                NotificationHelper.cancelTaskReminder(getApplication(), taskId)
+            } else {
+                NotificationHelper.scheduleTaskReminder(getApplication(), finalTask)
+            }
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+        }
+    }
+
+    fun duplicateTask(task: TaskEntity, onComplete: () -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val copy = task.copy(
+                id = 0,
+                title = "${task.title} (Copy)",
+                createdAt = System.currentTimeMillis()
+            )
+            val newTaskId = repository.insertTask(copy)
+            val existingSubs = subtasksMap.value[task.id] ?: emptyList()
+            for (sub in existingSubs) {
+                repository.insertSubtask(
+                    sub.copy(
+                        id = 0,
+                        taskId = newTaskId,
+                        isCompleted = false
+                    )
+                )
+            }
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+            withContext(Dispatchers.Main) {
+                onComplete()
+            }
+        }
+    }
+
+    fun updateTaskSchedule(task: TaskEntity, newStartDate: String, recurrenceType: String, customDays: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateTask(
+                task.copy(
+                    startDate = newStartDate,
+                    recurrenceType = recurrenceType,
+                    customDaysOfWeek = customDays
+                )
+            )
+            com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
+        }
+    }
+
+    fun updateTaskReminder(task: TaskEntity, reminderTime: String?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val updated = task.copy(reminderTime = reminderTime)
+            repository.updateTask(updated)
+            if (reminderTime.isNullOrBlank() || updated.isArchived) {
+                NotificationHelper.cancelTaskReminder(getApplication(), task.id)
+            } else {
+                NotificationHelper.scheduleTaskReminder(getApplication(), updated)
             }
             com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
         }
@@ -292,6 +435,12 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
             } else {
                 repository.updateTask(task)
                 task.id
+            }
+            val finalTask = task.copy(id = taskId)
+            if (finalTask.reminderTime.isNullOrBlank() || finalTask.isArchived) {
+                NotificationHelper.cancelTaskReminder(getApplication(), taskId)
+            } else {
+                NotificationHelper.scheduleTaskReminder(getApplication(), finalTask)
             }
             // Update subtasks
             if (subtaskTitles.isNotEmpty()) {
@@ -364,6 +513,7 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
 
     fun deleteTask(task: TaskEntity) {
         viewModelScope.launch(Dispatchers.IO) {
+            NotificationHelper.cancelTaskReminder(getApplication(), task.id)
             repository.deleteTask(task)
             com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(getApplication())
         }
@@ -391,10 +541,20 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setMorningReminderEnabled(enabled: Boolean) {
         preferences.setMorningReminderEnabled(enabled)
+        NotificationHelper.scheduleMorningOverviewReminder(
+            getApplication(),
+            preferences.morningReminderTime.value,
+            enabled
+        )
     }
 
     fun setMorningReminderTime(time: String) {
         preferences.setMorningReminderTime(time)
+        NotificationHelper.scheduleMorningOverviewReminder(
+            getApplication(),
+            time,
+            preferences.morningReminderEnabled.value
+        )
     }
 
     fun setReminderOnlyIfPending(onlyIfPending: Boolean) {
@@ -520,6 +680,9 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
         // Schedule periodic 30-minute widget updates and refresh on launch
         com.abubakr.taskstreak.widget.WidgetUpdateWorker.schedule(application)
         com.abubakr.taskstreak.widget.WidgetUpdater.updateAllWidgets(application)
+
+        // Reschedule all active task reminders
+        NotificationHelper.rescheduleAllReminders(application)
 
         // Schedule local weekly auto-backup if enabled
         if (preferences.autoBackupLocalEnabled.value) {
@@ -810,4 +973,353 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+
+    // ==========================================
+    // POMODORO & FOCUS TIMER ARCHITECTURE
+    // ==========================================
+    enum class FocusPhase { WORK, SHORT_BREAK, LONG_BREAK }
+
+    private val _focusPhase = MutableStateFlow(FocusPhase.WORK)
+    val focusPhase: StateFlow<FocusPhase> = _focusPhase.asStateFlow()
+
+    private val _focusIsRunning = MutableStateFlow(false)
+    val focusIsRunning: StateFlow<Boolean> = _focusIsRunning.asStateFlow()
+
+    private val _focusTargetSeconds = MutableStateFlow(25 * 60)
+    val focusTargetSeconds: StateFlow<Int> = _focusTargetSeconds.asStateFlow()
+
+    private val _focusRemainingSeconds = MutableStateFlow(25 * 60)
+    val focusRemainingSeconds: StateFlow<Int> = _focusRemainingSeconds.asStateFlow()
+
+    private val _focusElapsedSessionSeconds = MutableStateFlow(0)
+    val focusElapsedSessionSeconds: StateFlow<Int> = _focusElapsedSessionSeconds.asStateFlow()
+
+    private val _focusCompletedCycles = MutableStateFlow(0)
+    val focusCompletedCycles: StateFlow<Int> = _focusCompletedCycles.asStateFlow()
+
+    private val _focusSelectedTaskId = MutableStateFlow<Long?>(null)
+    val focusSelectedTaskId: StateFlow<Long?> = _focusSelectedTaskId.asStateFlow()
+
+    // 10-second transition countdown (for auto-start)
+    private val _focusAutoStartCountdown = MutableStateFlow<Int?>(null) // null = not counting down
+    val focusAutoStartCountdown: StateFlow<Int?> = _focusAutoStartCountdown.asStateFlow()
+
+    private var focusTimerJob: Job? = null
+    private var countdownJob: Job? = null
+    private var oneMinuteWarningFired = false
+
+    init {
+        // Initialize timer with persisted duration
+        val initialMins = preferences.focusLastDurationMinutes.value
+        _focusTargetSeconds.value = initialMins * 60
+        _focusRemainingSeconds.value = initialMins * 60
+    }
+
+    fun setFocusSelectedTask(taskId: Long?) {
+        _focusSelectedTaskId.value = taskId
+    }
+
+    fun setFocusSessionMode(mode: FocusSessionMode) {
+        preferences.setFocusSessionMode(mode.name)
+        when (mode) {
+            FocusSessionMode.CLASSIC -> {
+                setFocusCustomDuration(25)
+            }
+            FocusSessionMode.DEEP_WORK -> {
+                setFocusCustomDuration(90)
+            }
+            FocusSessionMode.CUSTOM -> {
+                val last = preferences.focusCustomWorkMinutes.value
+                setFocusCustomDuration(last)
+            }
+        }
+    }
+
+    fun setFocusCustomDuration(minutes: Int) {
+        val safeMins = minutes.coerceIn(5, 120)
+        preferences.setFocusLastDurationMinutes(safeMins)
+        if (_focusPhase.value == FocusPhase.WORK && !_focusIsRunning.value) {
+            _focusTargetSeconds.value = safeMins * 60
+            _focusRemainingSeconds.value = safeMins * 60
+            _focusElapsedSessionSeconds.value = 0
+        }
+    }
+
+    fun startFocusTimer() {
+        cancelCountdown()
+        if (_focusIsRunning.value) return
+        _focusIsRunning.value = true
+        focusTimerJob = viewModelScope.launch {
+            while (_focusRemainingSeconds.value > 0 && _focusIsRunning.value) {
+                delay(1000L)
+                if (!_focusIsRunning.value) break
+                _focusRemainingSeconds.value = (_focusRemainingSeconds.value - 1).coerceAtLeast(0)
+                _focusElapsedSessionSeconds.value += 1
+
+                // 1-minute smart warning
+                if (_focusRemainingSeconds.value == 60 && !oneMinuteWarningFired) {
+                    oneMinuteWarningFired = true
+                    if (preferences.focusOneMinuteWarningEnabled.value) {
+                        NotificationHelper.showFocusNotification(
+                            getApplication(),
+                            "1 Minute Left!",
+                            "Finish up your current thought or step. Almost there!",
+                            notificationId = 3001
+                        )
+                    }
+                }
+
+                if (_focusRemainingSeconds.value == 0) {
+                    onFocusPhaseCompleted()
+                    break
+                }
+            }
+        }
+    }
+
+    fun pauseFocusTimer() {
+        _focusIsRunning.value = false
+        focusTimerJob?.cancel()
+        focusTimerJob = null
+    }
+
+    fun stopAndLogFocus(abandoned: Boolean = false) {
+        pauseFocusTimer()
+        cancelCountdown()
+        val elapsedMins = _focusElapsedSessionSeconds.value / 60
+        val targetMins = _focusTargetSeconds.value / 60
+        val selectedTask = tasks.value.find { it.id == _focusSelectedTaskId.value }
+
+        if (_focusPhase.value == FocusPhase.WORK && elapsedMins > 0) {
+            val status = when {
+                abandoned && preferences.partialCreditEnabled.value -> FocusSessionStatus.PARTIAL
+                abandoned -> FocusSessionStatus.FAILED
+                else -> FocusSessionStatus.COMPLETED
+            }
+            preferences.addFocusSessionRecord(
+                taskId = selectedTask?.id,
+                taskTitle = selectedTask?.title,
+                targetMinutes = targetMins,
+                elapsedMinutes = elapsedMins,
+                status = status.name
+            )
+
+            if (status == FocusSessionStatus.COMPLETED && selectedTask != null) {
+                incrementPomodoro(selectedTask.id)
+            }
+        }
+
+        // Reset to fresh work session
+        resetFocusTimer()
+    }
+
+    fun resetFocusTimer() {
+        pauseFocusTimer()
+        cancelCountdown()
+        _focusPhase.value = FocusPhase.WORK
+        val durationMins = preferences.focusLastDurationMinutes.value
+        _focusTargetSeconds.value = durationMins * 60
+        _focusRemainingSeconds.value = durationMins * 60
+        _focusElapsedSessionSeconds.value = 0
+        oneMinuteWarningFired = false
+    }
+
+    fun skipCurrentPhase() {
+        pauseFocusTimer()
+        cancelCountdown()
+        transitionToNextPhase(autoTrigger = false)
+    }
+
+    fun cancelCountdown() {
+        countdownJob?.cancel()
+        countdownJob = null
+        _focusAutoStartCountdown.value = null
+    }
+
+    private fun onFocusPhaseCompleted() {
+        _focusIsRunning.value = false
+        focusTimerJob?.cancel()
+        focusTimerJob = null
+        oneMinuteWarningFired = false
+
+        val currentPhase = _focusPhase.value
+        val selectedTask = tasks.value.find { it.id == _focusSelectedTaskId.value }
+        val targetMins = _focusTargetSeconds.value / 60
+
+        if (currentPhase == FocusPhase.WORK) {
+            // Record completed session
+            preferences.addFocusSessionRecord(
+                taskId = selectedTask?.id,
+                taskTitle = selectedTask?.title,
+                targetMinutes = targetMins,
+                elapsedMinutes = targetMins,
+                status = FocusSessionStatus.COMPLETED.name
+            )
+            _focusCompletedCycles.value += 1
+            if (selectedTask != null) {
+                incrementPomodoro(selectedTask.id)
+            }
+
+            if (preferences.focusCompletionNotificationEnabled.value) {
+                NotificationHelper.showFocusNotification(
+                    getApplication(),
+                    "Focus Session Complete! 🎉",
+                    "Great job! You achieved ${targetMins}m of pure focus. Time for a well-deserved break.",
+                    notificationId = 3002
+                )
+            }
+        } else {
+            if (preferences.focusCompletionNotificationEnabled.value) {
+                NotificationHelper.showFocusNotification(
+                    getApplication(),
+                    "Break Over! ⚡",
+                    "Ready to dive back into deep focus?",
+                    notificationId = 3003
+                )
+            }
+        }
+
+        transitionToNextPhase(autoTrigger = true)
+    }
+
+    private fun transitionToNextPhase(autoTrigger: Boolean) {
+        val currentPhase = _focusPhase.value
+        val currentMode = runCatching { FocusSessionMode.valueOf(preferences.focusSessionMode.value) }
+            .getOrDefault(FocusSessionMode.CLASSIC)
+        val autoStart = runCatching { FocusAutoStartType.valueOf(preferences.focusAutoStartType.value) }
+            .getOrDefault(FocusAutoStartType.MANUAL)
+
+        if (autoStart == FocusAutoStartType.CONTINUOUS_NO_BREAK) {
+            // Continuous: Stay in WORK, reset seconds
+            _focusPhase.value = FocusPhase.WORK
+            val mins = preferences.focusLastDurationMinutes.value
+            _focusTargetSeconds.value = mins * 60
+            _focusRemainingSeconds.value = mins * 60
+            _focusElapsedSessionSeconds.value = 0
+            if (autoTrigger) {
+                startCountdownThenRun()
+            }
+            return
+        }
+
+        if (currentPhase == FocusPhase.WORK) {
+            val cycles = _focusCompletedCycles.value
+            val isLongBreak = when (currentMode) {
+                FocusSessionMode.CLASSIC -> cycles > 0 && cycles % 4 == 0
+                FocusSessionMode.DEEP_WORK -> cycles > 0 && cycles % 2 == 0
+                FocusSessionMode.CUSTOM -> {
+                    val req = preferences.focusCustomCyclesBeforeLongBreak.value
+                    cycles > 0 && cycles % req == 0
+                }
+            }
+
+            val breakMins = when {
+                isLongBreak && currentMode == FocusSessionMode.CLASSIC -> 15
+                isLongBreak && currentMode == FocusSessionMode.DEEP_WORK -> 20
+                isLongBreak && currentMode == FocusSessionMode.CUSTOM -> preferences.focusCustomLongBreakMinutes.value
+                currentMode == FocusSessionMode.DEEP_WORK -> 15
+                currentMode == FocusSessionMode.CUSTOM -> preferences.focusCustomShortBreakMinutes.value
+                else -> 5 // Classic short break
+            }
+
+            _focusPhase.value = if (isLongBreak) FocusPhase.LONG_BREAK else FocusPhase.SHORT_BREAK
+            _focusTargetSeconds.value = breakMins * 60
+            _focusRemainingSeconds.value = breakMins * 60
+            _focusElapsedSessionSeconds.value = 0
+
+            val shouldAuto = autoStart == FocusAutoStartType.BREAK_ONLY || autoStart == FocusAutoStartType.FULL_AUTO
+            if (autoTrigger && shouldAuto) {
+                startCountdownThenRun()
+            }
+        } else {
+            // Break finished -> back to WORK
+            _focusPhase.value = FocusPhase.WORK
+            val workMins = when (currentMode) {
+                FocusSessionMode.CLASSIC -> 25
+                FocusSessionMode.DEEP_WORK -> 90
+                FocusSessionMode.CUSTOM -> preferences.focusCustomWorkMinutes.value
+            }
+            _focusTargetSeconds.value = workMins * 60
+            _focusRemainingSeconds.value = workMins * 60
+            _focusElapsedSessionSeconds.value = 0
+
+            val shouldAuto = autoStart == FocusAutoStartType.FULL_AUTO
+            if (autoTrigger && shouldAuto) {
+                startCountdownThenRun()
+            }
+        }
+    }
+
+    private fun startCountdownThenRun() {
+        cancelCountdown()
+        countdownJob = viewModelScope.launch {
+            for (i in 10 downTo 1) {
+                _focusAutoStartCountdown.value = i
+                delay(1000L)
+            }
+            _focusAutoStartCountdown.value = null
+            startFocusTimer()
+        }
+    }
+
+    // Live daily statistics derived from records
+    data class FocusDailyStats(
+        val totalMinutesToday: Int,
+        val completedSessionsToday: Int,
+        val partialSessionsToday: Int,
+        val abandonedSessionsToday: Int,
+        val currentStreakDays: Int
+    )
+
+    val focusDailyStats: StateFlow<FocusDailyStats> = preferences.focusHistoryJson.map { jsonStr ->
+        val todayStr = java.time.LocalDate.now().toString()
+        var totalMins = 0
+        var completed = 0
+        var partial = 0
+        var abandoned = 0
+        val activeDates = mutableSetOf<String>()
+
+        try {
+            val arr = org.json.JSONArray(jsonStr)
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                val date = obj.optString("date", "")
+                val status = obj.optString("status", "")
+                val elapsed = obj.optInt("elapsedMinutes", 0)
+
+                if (status == FocusSessionStatus.COMPLETED.name || status == FocusSessionStatus.PARTIAL.name) {
+                    if (date.isNotBlank()) activeDates.add(date)
+                }
+
+                if (date == todayStr) {
+                    totalMins += elapsed
+                    when (status) {
+                        FocusSessionStatus.COMPLETED.name -> completed++
+                        FocusSessionStatus.PARTIAL.name -> partial++
+                        FocusSessionStatus.FAILED.name -> abandoned++
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+
+        // Calculate consecutive focus days streak
+        var streak = 0
+        var checkDate = java.time.LocalDate.now()
+        while (activeDates.contains(checkDate.toString())) {
+            streak++
+            checkDate = checkDate.minusDays(1)
+        }
+
+        FocusDailyStats(
+            totalMinutesToday = totalMins,
+            completedSessionsToday = completed,
+            partialSessionsToday = partial,
+            abandonedSessionsToday = abandoned,
+            currentStreakDays = streak
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        FocusDailyStats(0, 0, 0, 0, 0)
+    )
 }

@@ -1,6 +1,18 @@
 package com.abubakr.taskstreak.ui.screens
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +58,15 @@ import com.abubakr.taskstreak.ui.components.EmptyStateType
 import com.abubakr.taskstreak.ui.components.GamificationDialog
 import com.abubakr.taskstreak.ui.components.MilestoneCelebrationDialog
 import com.abubakr.taskstreak.ui.components.QrSyncDialog
+import com.abubakr.taskstreak.ui.components.AddTaskChoiceDialog
+import com.abubakr.taskstreak.ui.components.CompactInternalFilterRow
+import com.abubakr.taskstreak.ui.components.CompactTimeframeSelector
+import com.abubakr.taskstreak.ui.components.DailyCompactQuote
+import com.abubakr.taskstreak.ui.components.QuickReminderDialog
+import com.abubakr.taskstreak.ui.components.QuickScheduleDialog
+import com.abubakr.taskstreak.util.TaskFilterLogic
+import com.abubakr.taskstreak.util.TaskInternalFilter
+import com.abubakr.taskstreak.util.TimeframeFilter
 import com.abubakr.taskstreak.ui.components.SocialPassportDialog
 import com.abubakr.taskstreak.ui.components.StreakEmptyState
 import com.abubakr.taskstreak.ui.components.TemplatePickerDialog
@@ -70,6 +91,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -80,9 +102,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
@@ -98,7 +122,7 @@ import com.abubakr.taskstreak.ui.theme.DangerRed
 import com.abubakr.taskstreak.ui.viewmodel.StreakViewModel
 import com.abubakr.taskstreak.util.SoundAndHapticHelper
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     viewModel: StreakViewModel,
@@ -121,18 +145,52 @@ fun HomeScreen(
     val hapticsEnabled by viewModel.preferences.hapticsEnabled.collectAsStateWithLifecycle()
 
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
-    val statusFilter by viewModel.statusFilter.collectAsStateWithLifecycle()
-    val typeFilter by viewModel.typeFilter.collectAsStateWithLifecycle()
     val isSelectionMode by viewModel.isSelectionMode.collectAsStateWithLifecycle()
     val selectedTaskIds by viewModel.selectedTaskIds.collectAsStateWithLifecycle()
+    val selectedTimeframe by viewModel.selectedTimeframe.collectAsStateWithLifecycle()
+    val internalFilter by viewModel.taskInternalFilter.collectAsStateWithLifecycle()
+    val taskCompletionsMap by viewModel.taskCompletionsMap.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val quote = remember { viewModel.getDailyQuote() }
 
+    val configuration = LocalConfiguration.current
+    val isArabic = try {
+        configuration.locales[0]?.language?.startsWith("ar") == true
+    } catch (_: Exception) {
+        false
+    }
+
+    fun showQuickSnackbar(
+        message: String,
+        actionLabel: String? = null,
+        durationMs: Long = 1800L,
+        onAction: (() -> Unit)? = null
+    ) {
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val dismissJob = launch {
+                delay(durationMs)
+                snackbarHostState.currentSnackbarData?.dismiss()
+            }
+            val result = snackbarHostState.showSnackbar(
+                message = message,
+                actionLabel = actionLabel,
+                duration = androidx.compose.material3.SnackbarDuration.Indefinite
+            )
+            dismissJob.cancel()
+            if (result == SnackbarResult.ActionPerformed) {
+                onAction?.invoke()
+            }
+        }
+    }
+
+    var showAddTaskChoiceDialog by remember { mutableStateOf(false) }
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var taskToEdit by remember { mutableStateOf<TaskEntity?>(null) }
     var taskToDelete by remember { mutableStateOf<TaskEntity?>(null) }
+    var taskToChangeSchedule by remember { mutableStateOf<TaskEntity?>(null) }
+    var taskToSetReminder by remember { mutableStateOf<TaskEntity?>(null) }
     var showBulkDeleteConfirm by remember { mutableStateOf(false) }
     var showAddCategoryDialog by remember { mutableStateOf(false) }
 
@@ -147,28 +205,68 @@ fun HomeScreen(
     var milestoneCelebrationData by remember { mutableStateOf<Pair<TaskEntity, Int>?>(null) }
     var unlockedAchievement by remember { mutableStateOf<Achievement?>(null) }
 
-    val filteredTasks = remember(tasks, selectedCategory, taskStatsMap, searchQuery, statusFilter, typeFilter) {
+    val timeframeCounts = remember(tasks, taskCompletionsMap, selectedCategory) {
+        val categoryFiltered = if (selectedCategory == null) tasks else tasks.filter { it.category == selectedCategory }
+        TimeframeFilter.values().associateWith { tf ->
+            categoryFiltered.count { task ->
+                TaskFilterLogic.isTaskInTimeframe(
+                    task = task,
+                    timeframe = tf,
+                    taskCompletions = taskCompletionsMap[task.id] ?: emptySet()
+                )
+            }
+        }
+    }
+
+    val filteredTasks = remember(
+        tasks,
+        selectedCategory,
+        taskStatsMap,
+        taskCompletionsMap,
+        searchQuery,
+        selectedTimeframe,
+        internalFilter
+    ) {
         var list = if (selectedCategory == null) tasks else tasks.filter { it.category == selectedCategory }
+
         if (searchQuery.isNotBlank()) {
             list = list.filter {
                 it.title.contains(searchQuery, ignoreCase = true) ||
                         (it.note?.contains(searchQuery, ignoreCase = true) == true)
             }
         }
-        if (typeFilter == "HABIT") {
-            list = list.filter { it.isHabit }
-        } else if (typeFilter == "TASK") {
-            list = list.filter { !it.isHabit }
+
+        // Level 1: Timeframe Filter
+        list = list.filter { task ->
+            TaskFilterLogic.isTaskInTimeframe(
+                task = task,
+                timeframe = selectedTimeframe,
+                taskCompletions = taskCompletionsMap[task.id] ?: emptySet()
+            )
         }
-        if (statusFilter == "PENDING") {
-            list = list.filter { task -> taskStatsMap[task.id]?.isCompletedToday != true }
-        } else if (statusFilter == "COMPLETED") {
-            list = list.filter { task -> taskStatsMap[task.id]?.isCompletedToday == true }
+
+        // Level 2: Internal Filter (All Status, Habits, Pending, Completed, One-Time Tasks)
+        list = list.filter { task ->
+            val completions = taskCompletionsMap[task.id] ?: emptySet()
+            val isDoneToday = taskStatsMap[task.id]?.isCompletedToday == true
+            val isCompleted = TaskFilterLogic.isTaskCompletedForTimeframe(
+                task = task,
+                timeframe = selectedTimeframe,
+                taskCompletions = completions,
+                isCompletedToday = isDoneToday
+            )
+            TaskFilterLogic.matchesInternalFilter(
+                task = task,
+                internalFilter = internalFilter,
+                isCompleted = isCompleted
+            )
         }
+
         list.sortedWith(
             compareBy<TaskEntity> { task ->
-                val stats = taskStatsMap[task.id]
-                if (stats?.isCompletedToday == true) 1 else 0
+                val completions = taskCompletionsMap[task.id] ?: emptySet()
+                val isDoneToday = taskStatsMap[task.id]?.isCompletedToday == true
+                if (TaskFilterLogic.isTaskCompletedForTimeframe(task, selectedTimeframe, completions, isDoneToday)) 1 else 0
             }.thenByDescending { it.createdAt }
         )
     }
@@ -178,47 +276,13 @@ fun HomeScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             floatingActionButton = {
                 if (!isSelectionMode) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    FloatingActionButton(
+                        onClick = { showAddTaskChoiceDialog = true },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White,
+                        modifier = Modifier.testTag("fab_add_task")
                     ) {
-                        FloatingActionButton(
-                            onClick = { showTemplatePicker = true },
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.testTag("fab_templates")
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = "Templates",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Templates",
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
-                                )
-                            }
-                        }
-
-                        FloatingActionButton(
-                            onClick = { showAddTaskDialog = true },
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = Color.White,
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.testTag("fab_add_task")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add Task",
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+                        Icon(Icons.Default.Add, contentDescription = "Add Task or Habit")
                     }
                 }
             },
@@ -344,110 +408,7 @@ fun HomeScreen(
                     }
                 }
 
-            // Data Insights Card (Feature 33)
-            item {
-                val productivityInsight by viewModel.productivityInsights.collectAsStateWithLifecycle()
-                DataInsightsCard(insight = productivityInsight)
-            }
-
-            // Motivational Quote Card
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FormatQuote,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "\"${quote.first}\"",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                                    lineHeight = 18.sp
-                                ),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "— ${quote.second}",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Selection Mode Action Bar
-            if (isSelectionMode) {
-                item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        ),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { viewModel.clearSelection() }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Close selection")
-                                }
-                                Text(
-                                    text = "${selectedTaskIds.size} Selected",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { viewModel.selectAll(filteredTasks.map { it.id }) }) {
-                                    Icon(Icons.Default.SelectAll, contentDescription = "Select all")
-                                }
-                                IconButton(onClick = { viewModel.bulkCompleteSelected() }) {
-                                    Icon(
-                                        Icons.Default.CheckCircle,
-                                        contentDescription = "Bulk complete",
-                                        tint = com.abubakr.taskstreak.ui.theme.SuccessGreen
-                                    )
-                                }
-                                IconButton(onClick = { showBulkDeleteConfirm = true }) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = "Bulk delete",
-                                        tint = DangerRed
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Search Bar & Filter Row
+            // 1. Search Bar & Status/Type Filter Chips Row (Top)
             item {
                 Column(
                     modifier = Modifier
@@ -473,93 +434,17 @@ fun HomeScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(14.dp)
                     )
-
-                    // Quick status and type filter chips
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        FilterChip(
-                            selected = statusFilter == "ALL",
-                            onClick = { viewModel.statusFilter.value = "ALL" },
-                            label = { Text("All Status") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = Color.White
-                            )
-                        )
-                        FilterChip(
-                            selected = statusFilter == "PENDING",
-                            onClick = { viewModel.statusFilter.value = "PENDING" },
-                            label = { Text("Pending") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = Color.White
-                            )
-                        )
-                        FilterChip(
-                            selected = statusFilter == "COMPLETED",
-                            onClick = { viewModel.statusFilter.value = "COMPLETED" },
-                            label = { Text("Completed") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = com.abubakr.taskstreak.ui.theme.SuccessGreen,
-                                selectedLabelColor = Color.White
-                            )
-                        )
-
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "•",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-
-                        FilterChip(
-                            selected = typeFilter == "ALL",
-                            onClick = { viewModel.typeFilter.value = "ALL" },
-                            label = { Text("All Types") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = Color.White
-                            )
-                        )
-                        FilterChip(
-                            selected = typeFilter == "HABIT",
-                            onClick = {
-                                viewModel.typeFilter.value = if (typeFilter == "HABIT") "ALL" else "HABIT"
-                            },
-                            label = { Text("🔥 Habits") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = Color.White
-                            )
-                        )
-                        FilterChip(
-                            selected = typeFilter == "TASK",
-                            onClick = {
-                                viewModel.typeFilter.value = if (typeFilter == "TASK") "ALL" else "TASK"
-                            },
-                            label = { Text("✓ One-Time Tasks") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.tertiary,
-                                selectedLabelColor = Color.White
-                            )
-                        )
-                    }
                 }
             }
 
-            // Dynamic Greeting Card
+            // 2. Dynamic Greeting Card (Good night / Good morning) immediately after Search Bar
             item {
                 Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                     DynamicGreetingCard(overallStats = overallStats)
                 }
             }
 
-            // Daily Goal Card
+            // 3. Daily Goal Card
             item {
                 Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                     DailyGoalCard(
@@ -568,6 +453,104 @@ fun HomeScreen(
                         onGoalChange = { viewModel.setDailyGoal(it) }
                     )
                 }
+            }
+
+            // Data Insights Card (Feature 33)
+            item {
+                val productivityInsight by viewModel.productivityInsights.collectAsStateWithLifecycle()
+                DataInsightsCard(insight = productivityInsight)
+            }
+
+            // Daily Compact Quote
+            item {
+                DailyCompactQuote(
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+            }
+
+            // Level 1: Compact Timeframe Selector & Actions
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CompactTimeframeSelector(
+                        selectedTimeframe = selectedTimeframe,
+                        counts = timeframeCounts,
+                        onSelectTimeframe = { viewModel.setTimeframe(it) }
+                    )
+
+                    if (!isSelectionMode) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Templates Button
+                            Surface(
+                                onClick = { showTemplatePicker = true },
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.testTag("btn_templates")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AutoAwesome,
+                                        contentDescription = "Templates",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Templates",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+                                    )
+                                }
+                            }
+
+                            // Add Button -> opens AddTaskChoiceDialog
+                            Surface(
+                                onClick = { showAddTaskChoiceDialog = true },
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                contentColor = Color.White,
+                                modifier = Modifier.testTag("btn_add_task")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Add Task",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Add",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Level 2: Compact Internal Filters (All Status · Habits · Pending · Completed · One-Time Tasks)
+            item {
+                CompactInternalFilterRow(
+                    selectedFilter = internalFilter,
+                    onSelectFilter = { viewModel.setInternalFilter(it) },
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
             }
 
             // Category Filter Chips
@@ -582,15 +565,36 @@ fun HomeScreen(
                     ) {
                         val defaultColor = MaterialTheme.colorScheme.primary
                         // "All" chip
+                        val isAllSelected = selectedCategory == null
+                        val allScale by animateFloatAsState(
+                            targetValue = if (isAllSelected) 1.05f else 1.0f,
+                            animationSpec = spring(dampingRatio = 0.7f),
+                            label = "all_scale"
+                        )
                         FilterChip(
-                            selected = selectedCategory == null,
+                            selected = isAllSelected,
                             onClick = { viewModel.setSelectedCategory(null) },
-                            label = { Text("All (${tasks.size})") },
+                            label = {
+                                Text(
+                                    "All (${tasks.size})",
+                                    fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = defaultColor,
                                 selectedLabelColor = Color.White
                             ),
-                            modifier = Modifier.testTag("filter_all")
+                            border = if (isAllSelected) {
+                                FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = true,
+                                    borderColor = MaterialTheme.colorScheme.primaryContainer,
+                                    borderWidth = 2.dp
+                                )
+                            } else null,
+                            modifier = Modifier
+                                .testTag("filter_all")
+                                .graphicsLayer(scaleX = allScale, scaleY = allScale)
                         )
 
                         // Category chips
@@ -600,25 +604,46 @@ fun HomeScreen(
                                 Color(android.graphics.Color.parseColor(cat.colorHex))
                             } catch (_: Exception) { defaultColor }
 
+                            val catScale by animateFloatAsState(
+                                targetValue = if (isSelected) 1.05f else 1.0f,
+                                animationSpec = spring(dampingRatio = 0.7f),
+                                label = "cat_scale_${cat.name}"
+                            )
+
                             FilterChip(
                                 selected = isSelected,
                                 onClick = {
                                     viewModel.setSelectedCategory(if (isSelected) null else cat.name)
                                 },
-                                label = { Text(cat.name) },
+                                label = {
+                                    Text(
+                                        cat.name,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                },
                                 leadingIcon = {
                                     Box(
                                         modifier = Modifier
-                                            .size(8.dp)
+                                            .size(if (isSelected) 10.dp else 8.dp)
                                             .clip(CircleShape)
-                                            .background(catColor)
+                                            .background(if (isSelected) Color.White else catColor)
                                     )
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = catColor,
                                     selectedLabelColor = Color.White
                                 ),
-                                modifier = Modifier.testTag("filter_cat_${cat.name}")
+                                border = if (isSelected) {
+                                    FilterChipDefaults.filterChipBorder(
+                                        enabled = true,
+                                        selected = true,
+                                        borderColor = Color.White.copy(alpha = 0.8f),
+                                        borderWidth = 2.dp
+                                    )
+                                } else null,
+                                modifier = Modifier
+                                    .testTag("filter_cat_${cat.name}")
+                                    .graphicsLayer(scaleX = catScale, scaleY = catScale)
                             )
                         }
 
@@ -652,41 +677,21 @@ fun HomeScreen(
                 }
             }
 
-            // Tasks Section Title
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (selectedCategory == null) stringResource(R.string.all_tasks) else "$selectedCategory Tasks",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "${filteredTasks.size} task${if (filteredTasks.size == 1) "" else "s"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
             // Empty state if no tasks
             if (filteredTasks.isEmpty()) {
                 item {
                     val emptyType = when {
                         searchQuery.isNotBlank() -> EmptyStateType.SEARCH_NO_RESULTS
-                        statusFilter == "PENDING" -> EmptyStateType.ALL_CAUGHT_UP
+                        internalFilter == TaskInternalFilter.PENDING -> EmptyStateType.ALL_CAUGHT_UP
                         tasks.isEmpty() -> EmptyStateType.NO_TASKS
                         else -> EmptyStateType.NO_TASKS
                     }
                     StreakEmptyState(
                         type = emptyType,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                        onAction = { showAddTaskDialog = true }
+                        onAction = { showAddTaskChoiceDialog = true },
+                        secondaryActionText = if (tasks.isEmpty()) "Templates" else null,
+                        onSecondaryAction = if (tasks.isEmpty()) { { showTemplatePicker = true } } else null
                     )
                 }
             } else {
@@ -694,7 +699,16 @@ fun HomeScreen(
                     val blockerTask = task.blockedByTaskId?.let { bId -> tasks.find { it.id == bId } }
                     val isBlocked = blockerTask != null && (taskStatsMap[blockerTask.id]?.isCompletedToday != true)
 
-                    Box(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 20.dp)
+                            .animateItemPlacement(
+                                animationSpec = spring(
+                                    dampingRatio = 0.8f,
+                                    stiffness = 380f
+                                )
+                            )
+                    ) {
                         TaskCard(
                             task = task,
                             stats = taskStatsMap[task.id],
@@ -702,9 +716,7 @@ fun HomeScreen(
                             isBlocked = isBlocked,
                             blockerTitle = blockerTask?.title,
                             onBlockedClick = {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("🔒 Complete \"${blockerTask?.title}\" first!")
-                                }
+                                showQuickSnackbar(if (isArabic) "🔒 أكمل \"${blockerTask?.title}\" أولاً!" else "🔒 Complete \"${blockerTask?.title}\" first!")
                             },
                             isSelectionMode = isSelectionMode,
                             isSelected = selectedTaskIds.contains(task.id),
@@ -721,32 +733,38 @@ fun HomeScreen(
                                     if (newStreak in listOf(7, 30, 100, 365)) {
                                         milestoneCelebrationData = Pair(task, newStreak)
                                     }
-                                    scope.launch {
-                                        val result = snackbarHostState.showSnackbar(
-                                            message = "Completed: ${task.title} 🔥",
-                                            actionLabel = "Undo"
-                                        )
-                                        if (result == SnackbarResult.ActionPerformed) {
-                                            viewModel.undoToggleTaskCompletion()
-                                        }
+                                    showQuickSnackbar(
+                                        message = if (isArabic) "تم إنجاز: ${task.title} 🔥" else "Completed: ${task.title} 🔥",
+                                        actionLabel = if (isArabic) "تراجع" else "Undo",
+                                        durationMs = 1800L
+                                    ) {
+                                        viewModel.undoToggleTaskCompletion()
                                     }
                                 }
                             },
                             onEditTask = { taskToEdit = task },
                             onDeleteTask = {
                                 viewModel.deleteTaskWithUndo(task) { deletedTitle ->
-                                    scope.launch {
-                                        val result = snackbarHostState.showSnackbar(
-                                            message = "Deleted \"$deletedTitle\"",
-                                            actionLabel = "Undo"
-                                        )
-                                        if (result == SnackbarResult.ActionPerformed) {
-                                            viewModel.undoDelete()
-                                        }
+                                    showQuickSnackbar(
+                                        message = if (isArabic) "تم حذف \"$deletedTitle\"" else "Deleted \"$deletedTitle\"",
+                                        actionLabel = if (isArabic) "تراجع" else "Undo",
+                                        durationMs = 2000L
+                                    ) {
+                                        viewModel.undoDelete()
                                     }
                                 }
                             },
                             onViewCalendar = { onNavigateToCalendarForTask(task) },
+                            onChangeSchedule = { taskToChangeSchedule = task },
+                            onSetReminder = { taskToSetReminder = task },
+                            onDuplicateTask = {
+                                viewModel.duplicateTask(task) {
+                                    showQuickSnackbar(
+                                        message = if (isArabic) "تم تكرار المهمة" else "Task duplicated",
+                                        durationMs = 1800L
+                                    )
+                                }
+                            },
                             onToggleSubtask = { sub, isDone ->
                                 viewModel.toggleSubtask(sub, isDone)
                                 SoundAndHapticHelper.playTickFeedback(context, soundEnabled, hapticsEnabled)
@@ -756,9 +774,10 @@ fun HomeScreen(
                             },
                             onArchiveTask = {
                                 viewModel.archiveTask(task.id)
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Archived \"${task.title}\"")
-                                }
+                                showQuickSnackbar(
+                                    message = if (isArabic) "تمت أرشفة \"${task.title}\"" else "Archived \"${task.title}\"",
+                                    durationMs = 1800L
+                                )
                             },
                             onSyncCalendar = {
                                 viewModel.syncTaskToCalendar(context, task)
@@ -788,9 +807,10 @@ fun HomeScreen(
                 )
                 viewModel.saveTaskWithSubtasks(newTask, emptyList())
                 showVoiceInput = false
-                scope.launch {
-                    snackbarHostState.showSnackbar("Created task: \"${parsed.title}\" 🎙️")
-                }
+                showQuickSnackbar(
+                    message = if (isArabic) "تم إنشاء المهمة: \"${parsed.title}\" 🎙️" else "Created task: \"${parsed.title}\" 🎙️",
+                    durationMs = 2000L
+                )
             }
         )
     }
@@ -810,6 +830,54 @@ fun HomeScreen(
             task = task,
             streakDays = stats?.currentStreak ?: 0,
             onDismiss = { streakTaskToShare = null }
+        )
+    }
+
+    // Add Task Choice Dialog (Create New vs Templates)
+    if (showAddTaskChoiceDialog) {
+        AddTaskChoiceDialog(
+            onDismiss = { showAddTaskChoiceDialog = false },
+            onCreateNewTask = {
+                showAddTaskChoiceDialog = false
+                taskToEdit = null
+                showAddTaskDialog = true
+            },
+            onBrowseTemplates = {
+                showAddTaskChoiceDialog = false
+                showTemplatePicker = true
+            }
+        )
+    }
+
+    // Quick Schedule Dialog
+    taskToChangeSchedule?.let { task ->
+        QuickScheduleDialog(
+            task = task,
+            onDismiss = { taskToChangeSchedule = null },
+            onSaveSchedule = { newStartDate, recurrenceType, customDays ->
+                viewModel.updateTaskSchedule(task, newStartDate, recurrenceType, customDays)
+                taskToChangeSchedule = null
+                showQuickSnackbar(
+                    message = if (isArabic) "تم تحديث الموعد" else "Schedule updated",
+                    durationMs = 1800L
+                )
+            }
+        )
+    }
+
+    // Quick Reminder Dialog
+    taskToSetReminder?.let { task ->
+        QuickReminderDialog(
+            task = task,
+            onDismiss = { taskToSetReminder = null },
+            onSaveReminder = { reminderTime ->
+                viewModel.updateTaskReminder(task, reminderTime)
+                taskToSetReminder = null
+                showQuickSnackbar(
+                    message = if (isArabic) "تم ضبط التنبيه" else "Reminder updated",
+                    durationMs = 1800L
+                )
+            }
         )
     }
 
@@ -864,15 +932,12 @@ fun HomeScreen(
                         taskToDelete = null
                         if (target != null) {
                             viewModel.deleteTaskWithUndo(target) { name ->
-                                scope.launch {
-                                    val res = snackbarHostState.showSnackbar(
-                                        message = "Deleted \"$name\"",
-                                        actionLabel = "Undo",
-                                        duration = androidx.compose.material3.SnackbarDuration.Short
-                                    )
-                                    if (res == SnackbarResult.ActionPerformed) {
-                                        viewModel.undoDelete()
-                                    }
+                                showQuickSnackbar(
+                                    message = if (isArabic) "تم حذف \"$name\"" else "Deleted \"$name\"",
+                                    actionLabel = if (isArabic) "تراجع" else "Undo",
+                                    durationMs = 2000L
+                                ) {
+                                    viewModel.undoDelete()
                                 }
                             }
                         }
@@ -952,9 +1017,10 @@ fun HomeScreen(
                     createdAt = System.currentTimeMillis()
                 )
                 viewModel.saveTaskWithSubtasks(newTask, template.defaultSubtasks)
-                scope.launch {
-                    snackbarHostState.showSnackbar("Added habit: ${template.title} ✨")
-                }
+                showQuickSnackbar(
+                    message = if (isArabic) "تمت إضافة العادة: ${template.title} ✨" else "Added habit: ${template.title} ✨",
+                    durationMs = 1800L
+                )
             }
         )
     }
@@ -979,11 +1045,14 @@ fun HomeScreen(
             },
             onImportJson = { json ->
                 viewModel.importData(json) { success, msg ->
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            if (success) "Sync successful! ✅" else "Sync failed: $msg"
-                        )
-                    }
+                    showQuickSnackbar(
+                        message = if (success) {
+                            if (isArabic) "تمت المزامنة بنجاح! ✅" else "Sync successful! ✅"
+                        } else {
+                            if (isArabic) "فشلت المزامنة: $msg" else "Sync failed: $msg"
+                        },
+                        durationMs = 2000L
+                    )
                 }
             }
         )

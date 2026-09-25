@@ -167,7 +167,8 @@ fun AchievementUnlockDialog(
                                 SocialShareHelper.shareAchievement(
                                     context = context,
                                     title = achievement.localizedTitle(isArabic),
-                                    description = achievement.localizedDescription(isArabic)
+                                    description = achievement.localizedDescription(isArabic),
+                                    emoji = achievement.iconEmoji
                                 )
                             },
                             modifier = Modifier.weight(1f),

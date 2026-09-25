@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
@@ -26,6 +28,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -56,7 +59,9 @@ enum class EmptyStateType {
 fun StreakEmptyState(
     type: EmptyStateType,
     onAction: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    secondaryActionText: String? = null,
+    onSecondaryAction: (() -> Unit)? = null
 ) {
     val isArabic = LocalConfiguration.current.locales[0].language == "ar"
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -184,17 +189,35 @@ fun StreakEmptyState(
                 lineHeight = 20.sp
             )
 
-            if (onAction != null) {
+            if (onAction != null || onSecondaryAction != null) {
                 Spacer(modifier = Modifier.height(22.dp))
-                Button(
-                    onClick = onAction,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
-                    modifier = Modifier.testTag("btn_empty_state_action")
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(if (isArabic) actionTextAr else actionText, fontWeight = FontWeight.SemiBold)
+                    if (onAction != null) {
+                        Button(
+                            onClick = onAction,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
+                            modifier = Modifier.testTag("btn_empty_state_action")
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (isArabic) actionTextAr else actionText, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    if (onSecondaryAction != null && secondaryActionText != null) {
+                        OutlinedButton(
+                            onClick = onSecondaryAction,
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.testTag("btn_empty_state_secondary")
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(secondaryActionText, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
         }

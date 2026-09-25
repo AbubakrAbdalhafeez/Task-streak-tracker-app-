@@ -280,7 +280,10 @@ fun WeeklyReviewDialog(
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_TEXT, shareText)
                             }
-                            context.startActivity(Intent.createChooser(intent, if (isArabic) "مشاركة المراجعة الأسبوعية" else "Share Weekly Review"))
+                            val chooser = Intent.createChooser(intent, if (isArabic) "مشاركة المراجعة الأسبوعية" else "Share Weekly Review").apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(chooser)
                         },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)

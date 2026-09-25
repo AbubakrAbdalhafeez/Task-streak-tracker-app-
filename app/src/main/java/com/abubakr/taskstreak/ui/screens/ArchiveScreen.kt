@@ -74,18 +74,18 @@ fun ArchiveScreen(
                 title = {
                     Column {
                         Text(stringResource(R.string.task_archive_title), fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text("${archivedTasks.size} archived tasks", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.archived_count_label, archivedTasks.size), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("archive_back_button")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     if (archivedTasks.isNotEmpty()) {
                         IconButton(onClick = { showClearConfirm = true }, modifier = Modifier.testTag("clear_archive_button")) {
-                            Icon(Icons.Default.DeleteForever, contentDescription = "Clear Archive", tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Default.DeleteForever, contentDescription = stringResource(R.string.clear_archive_title), tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -154,8 +154,8 @@ fun ArchiveScreen(
     if (showClearConfirm) {
         AlertDialog(
             onDismissRequest = { showClearConfirm = false },
-            title = { Text("Clear All Archived Tasks?") },
-            text = { Text("This will permanently delete all ${archivedTasks.size} archived tasks and their completion history. This action cannot be undone.") },
+            title = { Text(stringResource(R.string.clear_archive_title)) },
+            text = { Text(stringResource(R.string.clear_archive_message, archivedTasks.size)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -164,12 +164,12 @@ fun ArchiveScreen(
                     },
                     modifier = Modifier.testTag("confirm_clear_archive")
                 ) {
-                    Text("Delete All", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete_all), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirm = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -215,8 +215,9 @@ private fun ArchivedTaskItem(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
+                    val typeLabel = if (task.isHabit) stringResource(R.string.habit) else stringResource(R.string.task)
                     Text(
-                        "${task.category} • ${if (task.isHabit) "Habit" else "Task"}",
+                        "${task.category} • $typeLabel",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -227,14 +228,14 @@ private fun ArchivedTaskItem(
                 IconButton(onClick = onRestore, modifier = Modifier.testTag("restore_task_${task.id}")) {
                     Icon(
                         Icons.Default.Restore,
-                        contentDescription = "Restore",
+                        contentDescription = stringResource(R.string.restore_task),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
                 IconButton(onClick = onDelete, modifier = Modifier.testTag("delete_archived_task_${task.id}")) {
                     Icon(
                         Icons.Default.DeleteForever,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.delete),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }

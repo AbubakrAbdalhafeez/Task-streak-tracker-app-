@@ -305,4 +305,23 @@ class StreakRepository(
             Result.failure(e)
         }
     }
+
+    suspend fun clearAllDatabaseData() {
+        taskDao.deleteAllTasks()
+        logDao.deleteAll()
+        subtaskDao.deleteAllSubtasks()
+        habitChainDao?.deleteAllChains()
+        categoryDao.deleteAllCategories()
+
+        // Re-seed default categories so user has clean slate
+        val defaultCategories = listOf(
+            CategoryEntity(name = "General", colorHex = "#FF6B35", iconName = "Bookmark"),
+            CategoryEntity(name = "Study", colorHex = "#3B82F6", iconName = "MenuBook"),
+            CategoryEntity(name = "English", colorHex = "#8B5CF6", iconName = "Translate"),
+            CategoryEntity(name = "Personal", colorHex = "#EC4899", iconName = "Person"),
+            CategoryEntity(name = "Fitness", colorHex = "#10B981", iconName = "FitnessCenter"),
+            CategoryEntity(name = "Work", colorHex = "#F59E0B", iconName = "Work")
+        )
+        categoryDao.insertAll(defaultCategories)
+    }
 }

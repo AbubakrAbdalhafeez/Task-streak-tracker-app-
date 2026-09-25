@@ -98,13 +98,14 @@ fun ContributionHeatmap(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
+                    val isArabic = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language == "ar"
                     Text(
                         text = stringResource(R.string.twelve_week_heatmap),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Visual consistency like GitHub contributions",
+                        text = stringResource(R.string.heatmap_consistency_sub),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -125,7 +126,13 @@ fun ContributionHeatmap(
                     modifier = Modifier.padding(end = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    listOf("M", "T", "W", "T", "F", "S", "S").forEach { dayLabel ->
+                    val isArabic = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language == "ar"
+                    val dayLabels = if (isArabic) {
+                        listOf("ن", "ث", "ر", "خ", "ج", "س", "ح")
+                    } else {
+                        listOf("M", "T", "W", "T", "F", "S", "S")
+                    }
+                    dayLabels.forEach { dayLabel ->
                         Box(
                             modifier = Modifier.size(16.dp),
                             contentAlignment = Alignment.Center

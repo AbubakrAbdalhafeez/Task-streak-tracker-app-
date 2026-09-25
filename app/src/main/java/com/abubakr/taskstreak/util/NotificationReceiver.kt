@@ -3,6 +3,9 @@ package com.abubakr.taskstreak.util
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class NotificationReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -26,5 +29,23 @@ class NotificationReceiver : BroadcastReceiver() {
             taskId = taskId,
             isMorningOverview = isMorning
         )
+
+        // Reschedule recurring task reminder for the next day
+        if (taskId != -1L) {
+            val pendingResult = goAsync()
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                try {
+                    val db = com.abubakr.taskstreak.data.db.AppDatabase.getDatabase(context)
+                    val task = db.taskDao().getTaskByIdDirect(taskId)
+                    if (task != null && !task.isArchived && !task.reminderTime.isNullOrBlank()) {
+                        NotificationHelper.scheduleTaskReminder(context, task)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("NotificationReceiver", "Error re-arming task reminder", e)
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+        }
     }
 }

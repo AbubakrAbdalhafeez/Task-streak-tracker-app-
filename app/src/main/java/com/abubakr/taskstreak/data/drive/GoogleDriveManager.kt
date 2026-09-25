@@ -38,11 +38,21 @@ class GoogleDriveManager(private val context: Context) {
     }
 
     private val signInOptions: GoogleSignInOptions by lazy {
-        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestEmail()
-            .requestProfile()
-            .requestScopes(Scope(DriveScopes.DRIVE_FILE))
-            .build()
+        val serverClientId = "366350221151-gg63hitdgu2trjjoldt7j01ai5v7770d.apps.googleusercontent.com"
+        try {
+            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .requestProfile()
+                .requestIdToken(serverClientId)
+                .requestScopes(Scope(DriveScopes.DRIVE_FILE))
+                .build()
+        } catch (e: Exception) {
+            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .requestProfile()
+                .requestScopes(Scope(DriveScopes.DRIVE_FILE))
+                .build()
+        }
     }
 
     private val googleSignInClient: GoogleSignInClient by lazy {

@@ -10,20 +10,11 @@ import java.util.TimeZone
 
 class TimeZoneChangeReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_TIMEZONE_CHANGED) {
+        val action = intent.action
+        if (action == Intent.ACTION_TIMEZONE_CHANGED || action == Intent.ACTION_TIME_CHANGED || action == Intent.ACTION_BOOT_COMPLETED) {
             val tzId = intent.getStringExtra("time-zone") ?: TimeZone.getDefault().id
-            Log.d("TimeZoneReceiver", "Device Time Zone changed to: $tzId")
-
-            val prefs = SettingsPreferences(context)
-            val isTravelMode = prefs.travelModeEnabled.value
-
-            if (isTravelMode) {
-                Log.d("TimeZoneReceiver", "Travel Mode is Active: Adjusting notification alarms to local time: $tzId")
-                NotificationHelper.rescheduleAllReminders(context)
-            } else {
-                Log.d("TimeZoneReceiver", "Standard mode: Rescheduling reminders at local time.")
-                NotificationHelper.rescheduleAllReminders(context)
-            }
+            Log.d("TimeZoneReceiver", "Received $action. Time Zone: $tzId. Rescheduling reminders.")
+            NotificationHelper.rescheduleAllReminders(context)
         }
     }
 }

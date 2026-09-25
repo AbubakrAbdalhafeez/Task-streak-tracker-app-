@@ -85,6 +85,11 @@ fun DynamicGreetingCard(
 
     val atRiskTasks = overallStats.activeTasksWithStreakAtRisk
 
+    val brandBlue = Color(0xFF2563EB)
+    val brandBlueLight = Color(0xFF3B82F6)
+    val brandBlueDark = Color(0xFF1E3A8A)
+    val brandBlueSoft = Color(0xFFDBEAFE)
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -92,7 +97,7 @@ fun DynamicGreetingCard(
             .animateContentSize(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = Color.Transparent
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -100,10 +105,10 @@ fun DynamicGreetingCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    Brush.horizontalGradient(
+                    Brush.verticalGradient(
                         colors = listOf(
-                            MaterialTheme.colorScheme.surfaceVariant,
-                            MaterialTheme.colorScheme.surface
+                            brandBlueDark,
+                            brandBlue
                         )
                     )
                 )
@@ -118,8 +123,8 @@ fun DynamicGreetingCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = timeIcon,
-                            fontSize = 24.sp,
-                            modifier = Modifier.padding(end = 8.dp)
+                            fontSize = 26.sp,
+                            modifier = Modifier.padding(end = 10.dp)
                         )
                         Column {
                             Text(
@@ -128,12 +133,12 @@ fun DynamicGreetingCard(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 20.sp
                                 ),
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = Color.White
                             )
                             Text(
                                 text = greetingSub,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = Color(0xFFBFDBFE)
                             )
                         }
                     }
@@ -141,8 +146,8 @@ fun DynamicGreetingCard(
                     if (overallStats.bestOverallStreak > 0) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                            color = Color.White.copy(alpha = 0.2f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.35f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -151,14 +156,14 @@ fun DynamicGreetingCard(
                                 Icon(
                                     imageVector = Icons.Default.LocalFireDepartment,
                                     contentDescription = "Streak",
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = Color(0xFFFDE047),
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = "${overallStats.bestOverallStreak}${if (isArabic) " يوم كأفضل سلسلة" else "d best"}",
                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = Color.White
                                 )
                             }
                         }
@@ -167,29 +172,26 @@ fun DynamicGreetingCard(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Status banner
+                // Status banner (Frosted Glass Blue Pill)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            if (allCompletedToday) SuccessGreen.copy(alpha = 0.12f)
-                            else MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
-                        )
+                        .background(Color.White.copy(alpha = 0.16f))
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = if (allCompletedToday) Icons.Default.CheckCircle else Icons.Default.WbSunny,
                         contentDescription = null,
-                        tint = if (allCompletedToday) SuccessGreen else WarningOrange,
+                        tint = if (allCompletedToday) Color(0xFF4ADE80) else Color(0xFFFDE047),
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = statusMessage,
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = Color.White
                     )
                 }
 
@@ -203,37 +205,43 @@ fun DynamicGreetingCard(
                         Text(
                             text = if (isArabic) "🔥 سلسلتك قوية ومشتعلة! حافظ على زخمك!" else "🔥 You're on fire! Keep the momentum going!",
                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.primary
+                            color = Color(0xFF93C5FD)
                         )
                     }
                 }
 
-                // Streak at risk warning
+                // Streak at risk warning (Prominent Red Banner with subtle shadow, clear contrast, and ⚠️ icon)
                 AnimatedVisibility(visible = atRiskTasks.isNotEmpty()) {
                     val firstAtRisk = atRiskTasks.firstOrNull()
                     if (firstAtRisk != null) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Row(
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(DangerRed.copy(alpha = 0.12f))
-                                .border(1.dp, DangerRed.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .clip(RoundedCornerShape(14.dp)),
+                            shape = RoundedCornerShape(14.dp),
+                            color = Color(0xFFDC2626), // Vibrant accessible red with high contrast against blue card
+                            shadowElevation = 4.dp,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFCA5A5).copy(alpha = 0.6f))
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Warning,
-                                contentDescription = "Warning",
-                                tint = DangerRed,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isArabic) "⚠️ السلسلة معرضة للخطر! مهمة \"${firstAtRisk.title}\" بانتظارك اليوم!" else "⚠️ Streak at risk! \"${firstAtRisk.title}\" is waiting today!",
-                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                                color = DangerRed
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 11.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "⚠️",
+                                    fontSize = 18.sp,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text(
+                                    text = if (isArabic) "تنبيه السلسلة: \"${firstAtRisk.title}\" مهددة بالانقطاع اليوم!" else "Streak Alert: \"${firstAtRisk.title}\" is at risk today!",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = Color.White,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }

@@ -115,14 +115,18 @@ fun MonthlyCalendarView(
                     )
                 }
 
+                val isArabic = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language == "ar"
+                val monthFormatter = remember(isArabic) {
+                    java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", if (isArabic) java.util.Locale("ar") else java.util.Locale.ENGLISH)
+                }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = currentMonth.format(DateUtils.MONTH_FORMATTER),
+                        text = currentMonth.format(monthFormatter),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Tap past or today to toggle completion",
+                        text = androidx.compose.ui.res.stringResource(com.abubakr.taskstreak.R.string.calendar_tap_hint),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

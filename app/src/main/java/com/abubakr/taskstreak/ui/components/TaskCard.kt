@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
@@ -71,6 +73,7 @@ import com.abubakr.taskstreak.data.model.SubtaskEntity
 import com.abubakr.taskstreak.data.model.TaskEntity
 import com.abubakr.taskstreak.ui.theme.DangerRed
 import com.abubakr.taskstreak.ui.theme.SuccessGreen
+import com.abubakr.taskstreak.util.DateUtils
 import com.abubakr.taskstreak.util.TaskStreakStats
 import java.time.DayOfWeek
 
@@ -97,6 +100,9 @@ fun TaskCard(
     onEditTask: () -> Unit,
     onDeleteTask: () -> Unit,
     onViewCalendar: () -> Unit,
+    onChangeSchedule: (() -> Unit)? = null,
+    onSetReminder: (() -> Unit)? = null,
+    onDuplicateTask: (() -> Unit)? = null,
     onToggleSubtask: ((SubtaskEntity, Boolean) -> Unit)? = null,
     onStartPomodoro: (() -> Unit)? = null,
     onArchiveTask: (() -> Unit)? = null,
@@ -342,7 +348,7 @@ fun TaskCard(
                                 )
                                 Spacer(modifier = Modifier.width(2.dp))
                                 Text(
-                                    text = task.reminderTime,
+                                    text = DateUtils.formatTime12Hour(task.reminderTime, isArabic),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -376,6 +382,33 @@ fun TaskCard(
                                     .size(14.dp)
                                     .clickable { showFullNote = !showFullNote }
                             )
+                        }
+                    }
+
+                    // Streak badge inline
+                    if (task.isHabit && currentStreak > 0) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocalFireDepartment,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = "$currentStreak",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
 
@@ -423,6 +456,88 @@ fun TaskCard(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
+                        // 1. Edit
+                        DropdownMenuItem(
+                            text = { Text(if (isArabic) "تعديل" else "Edit") },
+                            onClick = {
+                                showMenu = false
+                                onEditTask()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        )
+
+                        // 2. Mark Complete / Incomplete
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    if (isDone) (if (isArabic) "إلغاء الإكمال" else "Mark Incomplete")
+                                    else (if (isArabic) "إكمال المهمة" else "Mark Complete")
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                onToggleDoneToday()
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    if (isDone) Icons.Default.RadioButtonUnchecked else Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant else SuccessGreen
+                                )
+                            }
+                        )
+
+                        // 3. Change Schedule
+                        DropdownMenuItem(
+                            text = { Text(if (isArabic) "تغيير الموعد" else "Change Schedule") },
+                            onClick = {
+                                showMenu = false
+                                onChangeSchedule?.invoke()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        )
+
+                        // 4. Reminder
+                        DropdownMenuItem(
+                            text = { Text(if (isArabic) "ضبط التنبيه" else "Reminder") },
+                            onClick = {
+                                showMenu = false
+                                onSetReminder?.invoke()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        )
+
+                        // 5. Duplicate
+                        DropdownMenuItem(
+                            text = { Text(if (isArabic) "تكرار المهمة" else "Duplicate") },
+                            onClick = {
+                                showMenu = false
+                                onDuplicateTask?.invoke()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.ContentCopy, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                        )
+
+                        // 6. Delete
+                        DropdownMenuItem(
+                            text = { Text(if (isArabic) "حذف" else "Delete", color = DangerRed) },
+                            onClick = {
+                                showMenu = false
+                                onDeleteTask()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Delete, contentDescription = null, tint = DangerRed)
+                            }
+                        )
+
+                        // Secondary Actions
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.start_pomodoro)) },
                             onClick = {
@@ -444,16 +559,6 @@ fun TaskCard(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.edit_task)) },
-                            onClick = {
-                                showMenu = false
-                                onEditTask()
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Edit, contentDescription = null)
-                            }
-                        )
-                        DropdownMenuItem(
                             text = { Text(stringResource(R.string.share_streak_card)) },
                             onClick = {
                                 showMenu = false
@@ -464,16 +569,6 @@ fun TaskCard(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.add_to_calendar)) },
-                            onClick = {
-                                showMenu = false
-                                onSyncCalendar?.invoke()
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Event, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            }
-                        )
-                        DropdownMenuItem(
                             text = { Text(stringResource(R.string.archive_habit)) },
                             onClick = {
                                 showMenu = false
@@ -481,16 +576,6 @@ fun TaskCard(
                             },
                             leadingIcon = {
                                 Icon(Icons.Default.Archive, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete), color = DangerRed) },
-                            onClick = {
-                                showMenu = false
-                                onDeleteTask()
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Delete, contentDescription = null, tint = DangerRed)
                             }
                         )
                     }
@@ -553,73 +638,6 @@ fun TaskCard(
                             )
                         }
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Streaks and statistics pill strip
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Current Streak
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.LocalFireDepartment,
-                        contentDescription = "Current streak",
-                        tint = if (currentStreak > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = if (isArabic) "$currentStreak ${if (currentStreak == 1) "يوم" else "أيام"}" else "$currentStreak day${if (currentStreak == 1) "" else "s"}",
-                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                        color = if (currentStreak > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                // Best Streak
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.FlashOn,
-                        contentDescription = "Best streak",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = if (isArabic) "الأفضل: $bestStreak" else "Best: $bestStreak",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                // Completion Rate
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${completionRate.toInt()}% rate",
-                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                        color = if (completionRate >= 80f) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                // Quick Calendar Link
-                IconButton(
-                    onClick = onViewCalendar,
-                    modifier = Modifier.size(24.dp).testTag("task_quick_calendar_${task.id}")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CalendarMonth,
-                        contentDescription = "Calendar",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
                 }
             }
         }

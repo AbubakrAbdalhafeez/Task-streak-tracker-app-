@@ -61,7 +61,13 @@ class SettingsPreferences(context: Context) {
     val colorPalette: StateFlow<String> = _colorPalette.asStateFlow()
 
     private val _appLanguage =
-        MutableStateFlow(prefs.getString("app_language", "SYSTEM") ?: "SYSTEM")
+        MutableStateFlow(
+            prefs.getString("app_language", null).let { saved ->
+                if (saved in listOf("ar", "en")) saved!!
+                else if (java.util.Locale.getDefault().language == "ar") "ar"
+                else "en"
+            }
+        )
     val appLanguage: StateFlow<String> = _appLanguage.asStateFlow()
 
     private val _soundEnabled =
@@ -135,6 +141,47 @@ class SettingsPreferences(context: Context) {
     // Google Fit / Health Sync (Feature 55)
     private val _googleFitSyncEnabled = MutableStateFlow(prefs.getBoolean("google_fit_sync_enabled", false))
     val googleFitSyncEnabled: StateFlow<Boolean> = _googleFitSyncEnabled.asStateFlow()
+
+    // Pomodoro & Focus Settings
+    private val _partialCreditEnabled = MutableStateFlow(prefs.getBoolean("focus_partial_credit_enabled", true))
+    val partialCreditEnabled: StateFlow<Boolean> = _partialCreditEnabled.asStateFlow()
+
+    private val _focusLastDurationMinutes = MutableStateFlow(prefs.getInt("focus_last_duration_minutes", 25))
+    val focusLastDurationMinutes: StateFlow<Int> = _focusLastDurationMinutes.asStateFlow()
+
+    private val _focusSessionMode = MutableStateFlow(prefs.getString("focus_session_mode", "CLASSIC") ?: "CLASSIC")
+    val focusSessionMode: StateFlow<String> = _focusSessionMode.asStateFlow()
+
+    private val _focusAutoStartType = MutableStateFlow(prefs.getString("focus_auto_start_type", "MANUAL") ?: "MANUAL")
+    val focusAutoStartType: StateFlow<String> = _focusAutoStartType.asStateFlow()
+
+    private val _focusOneMinuteWarningEnabled = MutableStateFlow(prefs.getBoolean("focus_one_min_warning", true))
+    val focusOneMinuteWarningEnabled: StateFlow<Boolean> = _focusOneMinuteWarningEnabled.asStateFlow()
+
+    private val _focusCompletionNotificationEnabled = MutableStateFlow(prefs.getBoolean("focus_completion_notification", true))
+    val focusCompletionNotificationEnabled: StateFlow<Boolean> = _focusCompletionNotificationEnabled.asStateFlow()
+
+    private val _focusCustomWorkMinutes = MutableStateFlow(prefs.getInt("focus_custom_work_mins", 25))
+    val focusCustomWorkMinutes: StateFlow<Int> = _focusCustomWorkMinutes.asStateFlow()
+
+    private val _focusCustomShortBreakMinutes = MutableStateFlow(prefs.getInt("focus_custom_short_break_mins", 5))
+    val focusCustomShortBreakMinutes: StateFlow<Int> = _focusCustomShortBreakMinutes.asStateFlow()
+
+    private val _focusCustomLongBreakMinutes = MutableStateFlow(prefs.getInt("focus_custom_long_break_mins", 15))
+    val focusCustomLongBreakMinutes: StateFlow<Int> = _focusCustomLongBreakMinutes.asStateFlow()
+
+    private val _focusCustomCyclesBeforeLongBreak = MutableStateFlow(prefs.getInt("focus_custom_cycles", 4))
+    val focusCustomCyclesBeforeLongBreak: StateFlow<Int> = _focusCustomCyclesBeforeLongBreak.asStateFlow()
+
+    private val _focusDailyMinutesGoal = MutableStateFlow(prefs.getInt("focus_daily_minutes_goal", 100))
+    val focusDailyMinutesGoal: StateFlow<Int> = _focusDailyMinutesGoal.asStateFlow()
+
+    private val _focusDailySessionsGoal = MutableStateFlow(prefs.getInt("focus_daily_sessions_goal", 4))
+    val focusDailySessionsGoal: StateFlow<Int> = _focusDailySessionsGoal.asStateFlow()
+
+    // Stored focus log history (JSON array) for today's stats & history
+    private val _focusHistoryJson = MutableStateFlow(prefs.getString("focus_history_json", "[]") ?: "[]")
+    val focusHistoryJson: StateFlow<String> = _focusHistoryJson.asStateFlow()
 
     fun addXp(amount: Long) {
         val updated = (_totalXp.value + amount).coerceAtLeast(0L)
@@ -261,8 +308,9 @@ class SettingsPreferences(context: Context) {
     }
 
     fun setAppLanguage(lang: String) {
-        prefs.edit().putString("app_language", lang).apply()
-        _appLanguage.value = lang
+        val clean = if (lang == "ar") "ar" else "en"
+        prefs.edit().putString("app_language", clean).apply()
+        _appLanguage.value = clean
     }
 
     fun setSoundEnabled(enabled: Boolean) {
@@ -350,5 +398,113 @@ class SettingsPreferences(context: Context) {
     fun setLastLocalBackupTime(time: Long) {
         prefs.edit().putLong("last_local_backup_time", time).apply()
         _lastLocalBackupTime.value = time
+    }
+
+    // Pomodoro Setters
+    fun setPartialCreditEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("focus_partial_credit_enabled", enabled).apply()
+        _partialCreditEnabled.value = enabled
+    }
+
+    fun setFocusLastDurationMinutes(minutes: Int) {
+        val m = minutes.coerceIn(5, 120)
+        prefs.edit().putInt("focus_last_duration_minutes", m).apply()
+        _focusLastDurationMinutes.value = m
+    }
+
+    fun setFocusSessionMode(mode: String) {
+        prefs.edit().putString("focus_session_mode", mode).apply()
+        _focusSessionMode.value = mode
+    }
+
+    fun setFocusAutoStartType(type: String) {
+        prefs.edit().putString("focus_auto_start_type", type).apply()
+        _focusAutoStartType.value = type
+    }
+
+    fun setFocusOneMinuteWarningEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("focus_one_min_warning", enabled).apply()
+        _focusOneMinuteWarningEnabled.value = enabled
+    }
+
+    fun setFocusCompletionNotificationEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("focus_completion_notification", enabled).apply()
+        _focusCompletionNotificationEnabled.value = enabled
+    }
+
+    fun setFocusCustomWorkMinutes(minutes: Int) {
+        val m = minutes.coerceIn(5, 120)
+        prefs.edit().putInt("focus_custom_work_mins", m).apply()
+        _focusCustomWorkMinutes.value = m
+    }
+
+    fun setFocusCustomShortBreakMinutes(minutes: Int) {
+        val m = minutes.coerceIn(1, 30)
+        prefs.edit().putInt("focus_custom_short_break_mins", m).apply()
+        _focusCustomShortBreakMinutes.value = m
+    }
+
+    fun setFocusCustomLongBreakMinutes(minutes: Int) {
+        val m = minutes.coerceIn(5, 60)
+        prefs.edit().putInt("focus_custom_long_break_mins", m).apply()
+        _focusCustomLongBreakMinutes.value = m
+    }
+
+    fun setFocusCustomCyclesBeforeLongBreak(cycles: Int) {
+        val c = cycles.coerceIn(2, 8)
+        prefs.edit().putInt("focus_custom_cycles", c).apply()
+        _focusCustomCyclesBeforeLongBreak.value = c
+    }
+
+    fun setFocusDailyGoals(sessions: Int, minutes: Int) {
+        prefs.edit()
+            .putInt("focus_daily_sessions_goal", sessions.coerceAtLeast(1))
+            .putInt("focus_daily_minutes_goal", minutes.coerceAtLeast(10))
+            .apply()
+        _focusDailySessionsGoal.value = sessions.coerceAtLeast(1)
+        _focusDailyMinutesGoal.value = minutes.coerceAtLeast(10)
+    }
+
+    fun addFocusSessionRecord(
+        taskId: Long?,
+        taskTitle: String?,
+        targetMinutes: Int,
+        elapsedMinutes: Int,
+        status: String
+    ) {
+        try {
+            val jsonArray = org.json.JSONArray(_focusHistoryJson.value)
+            val obj = org.json.JSONObject().apply {
+                put("timestamp", System.currentTimeMillis())
+                put("taskId", taskId ?: -1L)
+                put("taskTitle", taskTitle ?: "")
+                put("targetMinutes", targetMinutes)
+                put("elapsedMinutes", elapsedMinutes)
+                put("status", status)
+                put("date", java.time.LocalDate.now().toString())
+            }
+            jsonArray.put(obj)
+            val updatedJson = jsonArray.toString()
+            prefs.edit().putString("focus_history_json", updatedJson).apply()
+            _focusHistoryJson.value = updatedJson
+        } catch (_: Exception) {}
+    }
+
+    fun resetAllGamificationAndHistory() {
+        prefs.edit()
+            .putLong("user_total_xp", 0L)
+            .putInt("streak_shields_count", 2)
+            .putInt("streak_shields_used", 0)
+            .putString("focus_history_json", "[]")
+            .putLong("last_local_backup_time", 0L)
+            .putLong("drive_last_synced_time", 0L)
+            .apply()
+
+        _totalXp.value = 0L
+        _streakShields.value = 2
+        _streakShieldsUsed.value = 0
+        _focusHistoryJson.value = "[]"
+        _lastLocalBackupTime.value = 0L
+        _driveLastSyncedTime.value = 0L
     }
 }

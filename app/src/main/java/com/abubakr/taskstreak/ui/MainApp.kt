@@ -46,6 +46,7 @@ import com.abubakr.taskstreak.ui.screens.HabitChainsScreen
 import com.abubakr.taskstreak.ui.screens.HomeScreen
 import com.abubakr.taskstreak.ui.screens.OnboardingScreen
 import com.abubakr.taskstreak.ui.screens.PomodoroScreen
+import com.abubakr.taskstreak.ui.screens.PomodoroSettingsScreen
 import com.abubakr.taskstreak.ui.screens.SettingsScreen
 import com.abubakr.taskstreak.ui.viewmodel.StreakViewModel
 
@@ -69,7 +70,8 @@ enum class SubScreen {
     HABIT_CHAINS,
     ADVANCED_BACKUP,
     COMMUNITY_HUB,
-    ONBOARDING
+    ONBOARDING,
+    POMODORO_SETTINGS
 }
 
 @Composable
@@ -132,6 +134,12 @@ fun MainApp(
                 }
                 SubScreen.ADVANCED_BACKUP -> {
                     AdvancedBackupScreen(
+                        viewModel = viewModel,
+                        onBack = { currentSubScreen = SubScreen.NONE }
+                    )
+                }
+                SubScreen.POMODORO_SETTINGS -> {
+                    PomodoroSettingsScreen(
                         viewModel = viewModel,
                         onBack = { currentSubScreen = SubScreen.NONE }
                     )
@@ -215,12 +223,10 @@ fun MainApp(
                     }
                     MainTab.POMODORO -> {
                         PomodoroScreen(
-                            tasks = tasks,
-                            onCompletePomodoro = { taskId ->
-                                viewModel.incrementPomodoro(taskId)
-                            },
-                            soundEnabled = soundEnabled,
-                            hapticsEnabled = hapticsEnabled
+                            viewModel = viewModel,
+                            onNavigateToSettings = {
+                                currentSubScreen = SubScreen.POMODORO_SETTINGS
+                            }
                         )
                     }
                     MainTab.CALENDAR -> {

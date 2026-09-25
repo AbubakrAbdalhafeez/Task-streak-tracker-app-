@@ -38,6 +38,9 @@ interface TaskDao {
     @Query("DELETE FROM tasks WHERE isArchived = 1")
     suspend fun deleteArchivedTasks()
 
+    @Query("DELETE FROM tasks")
+    suspend fun deleteAllTasks()
+
     @Query("SELECT * FROM tasks WHERE id IN (:ids)")
     suspend fun getTasksByIds(ids: List<Long>): List<TaskEntity>
 

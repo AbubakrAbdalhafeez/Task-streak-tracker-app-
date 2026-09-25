@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abubakr.taskstreak.R
@@ -78,12 +79,12 @@ fun HabitChainsScreen(
                 title = {
                     Column {
                         Text(stringResource(R.string.habit_chains_title), fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text("Stack habits together for +50 XP bonus", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.habit_chains_sub), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("chains_back_button")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -95,7 +96,7 @@ fun HabitChainsScreen(
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.testTag("add_chain_fab")
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Create Habit Chain")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.create_habit_chain))
             }
         }
     ) { padding ->
@@ -121,16 +122,16 @@ fun HabitChainsScreen(
                         )
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            "No Habit Chains created yet",
+                            stringResource(R.string.no_habit_chains),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "Chain habits together (e.g. Wake up ➔ Hydrate ➔ Stretch).\nComplete all in sequence to earn bonus XP!",
+                            stringResource(R.string.no_habit_chains_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -219,12 +220,16 @@ private fun HabitChainCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         "+${chain.bonusXp} XP",
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     )
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete Chain", tint = MaterialTheme.colorScheme.outline)
+                    Spacer(Modifier.width(4.dp))
+                    IconButton(onClick = onDelete, modifier = Modifier.size(28.dp).testTag("delete_chain_${chain.id}")) {
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
                     }
                 }
             }
@@ -233,16 +238,15 @@ private fun HabitChainCard(
 
             LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp),
+                modifier = Modifier.fillMaxWidth().height(6.dp),
                 color = if (isComplete) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
 
             Spacer(Modifier.height(6.dp))
             Text(
-                if (isComplete) "🎉 Chain completed! +${chain.bonusXp} XP Earned" else "$completedCount of $total completed today",
+                if (isComplete) stringResource(R.string.chain_completed_bonus, chain.bonusXp)
+                else stringResource(R.string.chain_progress_today, completedCount, total),
                 fontSize = 12.sp,
                 fontWeight = if (isComplete) FontWeight.Bold else FontWeight.Normal,
                 color = if (isComplete) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant
@@ -291,15 +295,18 @@ private fun CreateHabitChainDialog(
     val selectedIds = remember { mutableStateListOf<Long>() }
     var error by remember { mutableStateOf<String?>(null) }
 
+    val strTitleEmpty = stringResource(R.string.error_title_empty)
+    val strMinHabits = stringResource(R.string.error_chain_min_habits)
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create Habit Stack") },
+        title = { Text(stringResource(R.string.create_habit_stack_title)) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it; error = null },
-                    label = { Text("Stack Title (e.g. Morning Protocol)") },
+                    label = { Text(stringResource(R.string.stack_title_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("chain_title_input")
                 )
@@ -307,16 +314,16 @@ private fun CreateHabitChainDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Short Description") },
+                    label = { Text(stringResource(R.string.stack_desc_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(12.dp))
-                Text("Select Habits to Chain in Sequence:", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Text(stringResource(R.string.select_habits_chain), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                 Spacer(Modifier.height(6.dp))
 
                 if (availableTasks.isEmpty()) {
-                    Text("No habits available. Create habits first!", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.no_habits_available), fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                 } else {
                     LazyColumn(modifier = Modifier.height(180.dp)) {
                         items(availableTasks) { task ->
@@ -346,23 +353,23 @@ private fun CreateHabitChainDialog(
             TextButton(
                 onClick = {
                     if (title.isBlank()) {
-                        error = "Title cannot be empty"
+                        error = strTitleEmpty
                         return@TextButton
                     }
                     if (selectedIds.size < 2) {
-                        error = "Select at least 2 habits to build a chain"
+                        error = strMinHabits
                         return@TextButton
                     }
                     onSave(title, description, selectedIds.toList(), "#FF6B35", 50)
                 },
                 modifier = Modifier.testTag("save_chain_button")
             ) {
-                Text("Create Chain")
+                Text(stringResource(R.string.create_habit_chain))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

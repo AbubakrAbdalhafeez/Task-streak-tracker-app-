@@ -70,6 +70,7 @@ fun CalendarAnalyticsScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val isArabic = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language == "ar"
     val tasks by viewModel.tasks.collectAsStateWithLifecycle()
     val logs by viewModel.logs.collectAsStateWithLifecycle()
     val taskCompletionsMap by viewModel.taskCompletionsMap.collectAsStateWithLifecycle()
@@ -145,12 +146,12 @@ fun CalendarAnalyticsScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = selectedTask?.title ?: "Select a Task",
+                                    text = selectedTask?.title ?: stringResource(R.string.select_task_prompt),
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = selectedTask?.category ?: "Task",
+                                    text = selectedTask?.category ?: if (isArabic) "عادة" else "Task",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -158,7 +159,7 @@ fun CalendarAnalyticsScreen(
                         }
                         Icon(
                             imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "Select task",
+                            contentDescription = stringResource(R.string.select_task_prompt),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -173,7 +174,7 @@ fun CalendarAnalyticsScreen(
                                 text = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         val c = try {
-                                            Color(android.graphics.Color.parseColor(t.categoryColorHex))
+                                             Color(android.graphics.Color.parseColor(t.categoryColorHex))
                                         } catch (_: Exception) { defaultColor }
                                         Box(
                                             modifier = Modifier
@@ -203,17 +204,17 @@ fun CalendarAnalyticsScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 StatCard(
-                    title = "Completion",
+                    title = stringResource(R.string.stat_completion),
                     value = "${(selectedStats?.completionRate ?: overallStats.averageCompletionRate).toInt()}%",
-                    sub = "Scheduled days",
+                    sub = stringResource(R.string.stat_scheduled_days),
                     icon = Icons.Default.Percent,
                     tint = SuccessGreen,
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
-                    title = "Completions",
+                    title = stringResource(R.string.stat_completions),
                     value = "${selectedStats?.totalCompletions ?: overallStats.totalCompletionsAllTime}",
-                    sub = "Total done",
+                    sub = stringResource(R.string.stat_total_done),
                     icon = Icons.Default.CheckCircle,
                     tint = InfoBlue,
                     modifier = Modifier.weight(1f)
@@ -227,17 +228,17 @@ fun CalendarAnalyticsScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 StatCard(
-                    title = "This Week",
+                    title = stringResource(R.string.stat_this_week),
                     value = "${selectedStats?.completedThisWeek ?: 0}",
-                    sub = "Days done",
+                    sub = stringResource(R.string.stat_days_done),
                     icon = Icons.Default.DateRange,
                     tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
-                    title = "Best Streak",
-                    value = "${selectedStats?.bestStreak ?: overallStats.bestOverallStreak}d",
-                    sub = "Longest chain",
+                    title = stringResource(R.string.stat_best_streak),
+                    value = "${selectedStats?.bestStreak ?: overallStats.bestOverallStreak}${if (isArabic) " يوم" else "d"}",
+                    sub = stringResource(R.string.stat_longest_chain),
                     icon = Icons.Default.LocalFireDepartment,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
@@ -284,24 +285,42 @@ fun CalendarAnalyticsScreen(
             OutlinedButton(
                 onClick = {
                     val report = buildString {
-                        append("📊 Habit Progress Report:\n")
-                        append("Task: ${selectedTask?.title ?: "All Habits"}\n")
-                        selectedStats?.let {
-                            append("🔥 Current Streak: ${it.currentStreak} days\n")
-                            append("🏆 Best Streak: ${it.bestStreak} days\n")
-                            append("📈 Completion Rate: ${it.completionRate.toInt()}%\n")
-                            append("✅ Total Completed: ${it.totalCompletions} times\n")
-                        } ?: run {
-                            append("🔥 Total Completions: ${overallStats.totalCompletionsAllTime}\n")
-                            append("⚡ Active Habits: ${overallStats.totalActiveTasks}\n")
+                        if (isArabic) {
+                            append("📊 تقرير إنجاز العادات:\n")
+                            append("العادة: ${selectedTask?.title ?: "جميع العادات"}\n")
+                            selectedStats?.let {
+                                append("🔥 السلسلة الحالية: ${it.currentStreak} يوم\n")
+                                append("🏆 أفضل سلسلة: ${it.bestStreak} يوم\n")
+                                append("📈 نسبة الإنجاز: ${it.completionRate.toInt()}%\n")
+                                append("✅ إجمالي مرات الإنجاز: ${it.totalCompletions} مرة\n")
+                            } ?: run {
+                                append("🔥 إجمالي مرات الإنجاز: ${overallStats.totalCompletionsAllTime}\n")
+                                append("⚡ العادات النشطة: ${overallStats.totalActiveTasks}\n")
+                            }
+                            append("\nتم التتبع عبر TaskStreak 🔥")
+                        } else {
+                            append("📊 Habit Progress Report:\n")
+                            append("Task: ${selectedTask?.title ?: "All Habits"}\n")
+                            selectedStats?.let {
+                                append("🔥 Current Streak: ${it.currentStreak} days\n")
+                                append("🏆 Best Streak: ${it.bestStreak} days\n")
+                                append("📈 Completion Rate: ${it.completionRate.toInt()}%\n")
+                                append("✅ Total Completed: ${it.totalCompletions} times\n")
+                            } ?: run {
+                                append("🔥 Total Completions: ${overallStats.totalCompletionsAllTime}\n")
+                                append("⚡ Active Habits: ${overallStats.totalActiveTasks}\n")
+                            }
+                            append("\nTracked with TaskStreak 🔥")
                         }
-                        append("\nTracked with TaskStreak 🔥")
                     }
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, report)
                     }
-                    context.startActivity(Intent.createChooser(shareIntent, "Share Progress Report"))
+                    val chooser = Intent.createChooser(shareIntent, if (isArabic) "مشاركة تقرير الإنجاز" else "Share Progress Report").apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(chooser)
                 },
                 modifier = Modifier
                     .fillMaxWidth()

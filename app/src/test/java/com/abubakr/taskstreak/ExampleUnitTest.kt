@@ -1,9 +1,9 @@
-package com.example
+package com.abubakr.taskstreak
 
-import com.example.data.model.RecurrenceType
-import com.example.data.model.TaskEntity
-import com.example.util.DateUtils
-import com.example.util.StreakCalculator
+import com.abubakr.taskstreak.data.model.RecurrenceType
+import com.abubakr.taskstreak.data.model.TaskEntity
+import com.abubakr.taskstreak.util.DateUtils
+import com.abubakr.taskstreak.util.StreakCalculator
 import org.junit.Assert.*
 import org.junit.Test
 import java.time.LocalDate

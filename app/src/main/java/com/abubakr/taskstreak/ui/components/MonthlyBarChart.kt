@@ -78,6 +78,7 @@ fun MonthlyBarChart(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
+            val isArabic = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language == "ar"
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -90,14 +91,14 @@ fun MonthlyBarChart(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Task completions breakdown across 12 months",
+                        text = stringResource(R.string.chart_breakdown_sub),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 Text(
-                    text = "${monthCounts.sum()} total",
+                    text = "${monthCounts.sum()} ${stringResource(R.string.chart_total_suffix)}",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -179,7 +180,8 @@ fun MonthlyBarChart(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         // Month label
-                        val monthName = Month.of(m).getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(3)
+                        val locale = if (isArabic) Locale("ar") else Locale.ENGLISH
+                        val monthName = Month.of(m).getDisplayName(TextStyle.SHORT, locale).take(3)
                         Text(
                             text = monthName,
                             style = MaterialTheme.typography.labelSmall.copy(

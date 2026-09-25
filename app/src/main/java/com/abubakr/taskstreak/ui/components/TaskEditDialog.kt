@@ -1,5 +1,7 @@
 package com.abubakr.taskstreak.ui.components
 
+import android.app.TimePickerDialog
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,6 +24,9 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -33,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,6 +50,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -57,6 +65,7 @@ import com.abubakr.taskstreak.data.model.TaskEntity
 import com.abubakr.taskstreak.util.DateUtils
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.util.Locale
 
 @Composable
 fun TaskEditDialog(
@@ -91,7 +100,12 @@ fun TaskEditDialog(
     }
     var startDate by remember { mutableStateOf(taskToEdit?.startDate ?: DateUtils.todayString()) }
     var endDate by remember { mutableStateOf(taskToEdit?.endDate ?: "") }
-    var reminderTime by remember { mutableStateOf(taskToEdit?.reminderTime ?: "") }
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
+    var reminderTime by remember { mutableStateOf(taskToEdit?.reminderTime ?: "09:00") }
+    var isReminderEnabled by remember { mutableStateOf(!taskToEdit?.reminderTime.isNullOrBlank()) }
+    val context = LocalContext.current
+    val isArabic = LocalConfiguration.current.locales[0].language == "ar"
     var note by remember { mutableStateOf(taskToEdit?.note ?: "") }
     var autoCompleteWithSubtasks by remember { mutableStateOf(taskToEdit?.autoCompleteWithSubtasks ?: true) }
     var subtasksList by remember { mutableStateOf(initialSubtasks) }
@@ -353,50 +367,194 @@ fun TaskEditDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Dates: Start Date & Optional End Date
+                // Dates: Start Date & Optional End Date (Year -> Month -> Day Picker)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    OutlinedTextField(
-                        value = startDate,
-                        onValueChange = { startDate = it },
-                        label = { Text("Start Date") },
-                        placeholder = { Text("yyyy-MM-dd") },
-                        singleLine = true,
-                        leadingIcon = {
-                            Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(16.dp))
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
+                    // Start Date Selector
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showStartDatePicker = true }
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                            Text(
+                                text = if (isArabic) "تاريخ البدء" else "Start Date",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = startDate.ifBlank { DateUtils.todayString() },
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
 
-                    OutlinedTextField(
-                        value = endDate,
-                        onValueChange = { endDate = it },
-                        label = { Text("End (Optional)") },
-                        placeholder = { Text("yyyy-MM-dd") },
-                        singleLine = true,
-                        leadingIcon = {
-                            Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(16.dp))
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
+                    // End Date Selector (Optional)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showEndDatePicker = true }
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                            Text(
+                                text = if (isArabic) "تاريخ الانتهاء" else "End (Optional)",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = null,
+                                    tint = if (endDate.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (endDate.isNotBlank()) endDate else if (isArabic) "مستمر" else "Ongoing",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = if (endDate.isNotBlank()) FontWeight.SemiBold else FontWeight.Normal
+                                    ),
+                                    color = if (endDate.isNotBlank()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Reminder Time (Optional, e.g. 08:30)
-                OutlinedTextField(
-                    value = reminderTime,
-                    onValueChange = { reminderTime = it },
-                    label = { Text(stringResource(R.string.reminder_time_optional)) },
-                    placeholder = { Text("e.g. 08:30 or 20:00") },
-                    singleLine = true,
-                    leadingIcon = {
-                        Icon(Icons.Default.AccessTime, contentDescription = null, modifier = Modifier.size(16.dp))
-                    },
+                // Reminder Row: Off or formatted Time (Click to change via TimePickerDialog)
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = if (isReminderEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    ),
                     modifier = Modifier.fillMaxWidth()
-                )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isReminderEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isReminderEnabled) Icons.Default.NotificationsActive else Icons.Default.NotificationsOff,
+                                    contentDescription = null,
+                                    tint = if (isReminderEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column {
+                                Text(
+                                    text = if (isArabic) "التنبيه" else "Reminder",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+
+                                if (isReminderEnabled) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                        modifier = Modifier
+                                            .padding(top = 2.dp)
+                                            .clickable {
+                                                val parts = reminderTime.split(":")
+                                                val initialH = parts.getOrNull(0)?.trim()?.toIntOrNull() ?: 9
+                                                val initialM = parts.getOrNull(1)?.trim()?.toIntOrNull() ?: 0
+                                                TimePickerDialog(
+                                                    context,
+                                                    { _, hourOfDay, minute ->
+                                                        reminderTime = String.format(Locale.US, "%02d:%02d", hourOfDay, minute)
+                                                    },
+                                                    initialH,
+                                                    initialM,
+                                                    false // 12-hour AM/PM dialog for any time of day
+                                                ).show()
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = DateUtils.formatTime12Hour(reminderTime, isArabic),
+                                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = if (isArabic) "تعديل الوقت" else "Edit Time",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(13.dp)
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Text(
+                                        text = if (isArabic) "معطل (Off)" else "Off",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        Switch(
+                            checked = isReminderEnabled,
+                            onCheckedChange = { enabled ->
+                                isReminderEnabled = enabled
+                                if (enabled && reminderTime.isBlank()) {
+                                    reminderTime = "09:00"
+                                }
+                            },
+                            modifier = Modifier.testTag("switch_task_reminder")
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(14.dp))
 
@@ -594,7 +752,7 @@ fun TaskEditDialog(
                                 customDaysOfWeek = if (recurrenceType == RecurrenceType.CUSTOM.name) daysString else "1,2,3,4,5,6,7",
                                 startDate = if (startDate.isNotBlank()) startDate.trim() else DateUtils.todayString(),
                                 endDate = if (endDate.isNotBlank()) endDate.trim() else null,
-                                reminderTime = if (reminderTime.isNotBlank()) reminderTime.trim() else null,
+                                reminderTime = if (isReminderEnabled && reminderTime.isNotBlank()) reminderTime.trim() else null,
                                 createdAt = taskToEdit?.createdAt ?: System.currentTimeMillis(),
                                 isArchived = taskToEdit?.isArchived ?: false,
                                 note = if (note.isNotBlank()) note.trim() else null,
@@ -618,5 +776,32 @@ fun TaskEditDialog(
                 }
             }
         }
+    }
+
+    if (showStartDatePicker) {
+        YearMonthDayPickerDialog(
+            title = if (isArabic) "تحديد تاريخ البدء" else "Select Start Date",
+            initialDate = startDate,
+            allowClear = false,
+            onDateSelected = { selectedDate ->
+                startDate = selectedDate
+            },
+            onDismiss = { showStartDatePicker = false }
+        )
+    }
+
+    if (showEndDatePicker) {
+        YearMonthDayPickerDialog(
+            title = if (isArabic) "تحديد تاريخ الانتهاء" else "Select End Date",
+            initialDate = if (endDate.isNotBlank()) endDate else startDate,
+            allowClear = true,
+            onDateSelected = { selectedDate ->
+                endDate = selectedDate
+            },
+            onClearDate = {
+                endDate = ""
+            },
+            onDismiss = { showEndDatePicker = false }
+        )
     }
 }

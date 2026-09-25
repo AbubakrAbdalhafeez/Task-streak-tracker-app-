@@ -12,6 +12,8 @@ import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -52,11 +54,11 @@ class MainActivity : ComponentActivity() {
             val appLanguage by viewModel.preferences.appLanguage.collectAsStateWithLifecycle()
 
             val targetLocale = remember(appLanguage) {
-                when (appLanguage) {
-                    "ar" -> Locale("ar")
-                    "en" -> Locale("en")
-                    else -> Locale.getDefault()
-                }
+                if (appLanguage == "ar") Locale("ar") else Locale("en")
+            }
+
+            LaunchedEffect(targetLocale) {
+                Locale.setDefault(targetLocale)
             }
 
             val currentConfig = LocalConfiguration.current
@@ -75,13 +77,25 @@ class MainActivity : ComponentActivity() {
                 currentContext.createConfigurationContext(conf)
             }
 
+            DisposableEffect(targetLocale) {
+                Locale.setDefault(targetLocale)
+                val config = resources.configuration
+                config.setLocale(targetLocale)
+                config.setLayoutDirection(targetLocale)
+                @Suppress("DEPRECATION")
+                resources.updateConfiguration(config, resources.displayMetrics)
+                onDispose { }
+            }
+
             val isRtl = targetLocale.language == "ar"
 
             CompositionLocalProvider(
                 LocalConfiguration provides localizedConfig,
                 LocalContext provides localizedContext,
                 LocalActivityResultRegistryOwner provides this@MainActivity,
-                LocalLayoutDirection provides if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+                LocalLayoutDirection provides if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr,
+                com.abubakr.taskstreak.util.LocalAppLanguage provides appLanguage,
+                com.abubakr.taskstreak.util.LocalIsArabic provides isRtl
             ) {
                 TaskStreakTheme(themePreference = themeMode, colorPalette = colorPalette) {
                     MainApp(viewModel = viewModel)

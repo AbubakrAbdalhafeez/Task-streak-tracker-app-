@@ -10,7 +10,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -27,9 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Computer
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.ViewHeadline
 import androidx.compose.material3.AlertDialog
@@ -41,7 +38,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -56,11 +52,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abubakr.taskstreak.R
 import com.abubakr.taskstreak.ui.viewmodel.StreakViewModel
 import java.io.File
 import java.text.SimpleDateFormat
@@ -80,10 +79,14 @@ fun AdvancedBackupScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val isArabic = LocalConfiguration.current.locales[0].language == "ar"
     val backupList = remember { mutableStateListOf<BackupFileInfo>() }
     var mergeMode by remember { mutableStateOf(true) }
     var pendingJsonContent by remember { mutableStateOf<String?>(null) }
-    var exportPreviewContent by remember { mutableStateOf<Pair<String, String>?>(null) } // title to content
+    var exportPreviewContent by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+    val strDesktopJson = stringResource(R.string.desktop_companion_json)
+    val strMarkdown = stringResource(R.string.obsidian_markdown)
 
     fun refreshBackups() {
         backupList.clear()
@@ -113,7 +116,7 @@ fun AdvancedBackupScreen(
                     pendingJsonContent = text
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Error reading file: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, e.message ?: "Error", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -121,10 +124,10 @@ fun AdvancedBackupScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Advanced Backup & Desktop Sync", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+                title = { Text(stringResource(R.string.advanced_backup_title), fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("backup_back_button")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -146,7 +149,7 @@ fun AdvancedBackupScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Import & Restore Data", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(stringResource(R.string.import_restore_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Spacer(Modifier.height(8.dp))
 
                         Row(
@@ -155,9 +158,9 @@ fun AdvancedBackupScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Merge with Existing Data", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                                Text(stringResource(R.string.merge_data_title), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                                 Text(
-                                    if (mergeMode) "Keep current tasks & add imported ones" else "Replace/overwrite matching tasks",
+                                    if (mergeMode) stringResource(R.string.merge_data_on_desc) else stringResource(R.string.merge_data_off_desc),
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -176,7 +179,7 @@ fun AdvancedBackupScreen(
                         ) {
                             Icon(Icons.Default.Upload, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Select Backup JSON to Import")
+                            Text(stringResource(R.string.select_backup_file))
                         }
                     }
                 }
@@ -190,9 +193,9 @@ fun AdvancedBackupScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Multi-Platform Sync & Desktop", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(stringResource(R.string.multi_platform_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Text(
-                            "Export your tasks, chains, and logs for Windows/Mac desktop companions or Markdown notes (Obsidian, Notion)",
+                            stringResource(R.string.multi_platform_desc),
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -205,27 +208,27 @@ fun AdvancedBackupScreen(
                             OutlinedButton(
                                 onClick = {
                                     viewModel.exportDesktopJson { json ->
-                                        exportPreviewContent = "Desktop Companion JSON" to json
+                                        exportPreviewContent = strDesktopJson to json
                                     }
                                 },
                                 modifier = Modifier.weight(1f).testTag("export_desktop_button")
                             ) {
                                 Icon(Icons.Default.Computer, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Desktop JSON", fontSize = 12.sp)
+                                Text(stringResource(R.string.desktop_json_label), fontSize = 12.sp)
                             }
 
                             OutlinedButton(
                                 onClick = {
                                     viewModel.exportMarkdown { md ->
-                                        exportPreviewContent = "Obsidian / Notion Markdown" to md
+                                        exportPreviewContent = strMarkdown to md
                                     }
                                 },
                                 modifier = Modifier.weight(1f).testTag("export_markdown_button")
                             ) {
                                 Icon(Icons.Default.ViewHeadline, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Markdown", fontSize = 12.sp)
+                                Text(stringResource(R.string.markdown_label), fontSize = 12.sp)
                             }
                         }
                     }
@@ -239,9 +242,9 @@ fun AdvancedBackupScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Local Backup History (Downloads)", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(stringResource(R.string.backup_history_title), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     IconButton(onClick = { refreshBackups() }) {
-                        Icon(Icons.Default.History, contentDescription = "Refresh", tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.History, contentDescription = stringResource(R.string.refresh), tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -249,7 +252,7 @@ fun AdvancedBackupScreen(
             if (backupList.isEmpty()) {
                 item {
                     Text(
-                        "No automatic backup snapshots found in Downloads yet. Enable auto-backup in Settings to generate weekly snapshots.",
+                        stringResource(R.string.backup_history_empty),
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -258,6 +261,7 @@ fun AdvancedBackupScreen(
                 items(backupList) { fileInfo ->
                     BackupFileItem(
                         fileInfo = fileInfo,
+                        isArabic = isArabic,
                         onRestore = {
                             try {
                                 val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -267,7 +271,7 @@ fun AdvancedBackupScreen(
                                     pendingJsonContent = text
                                 }
                             } catch (e: Exception) {
-                                Toast.makeText(context, "Cannot read file: ${e.message}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, e.message ?: "Error", Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
@@ -280,13 +284,11 @@ fun AdvancedBackupScreen(
     pendingJsonContent?.let { json ->
         AlertDialog(
             onDismissRequest = { pendingJsonContent = null },
-            title = { Text("Confirm Import") },
+            title = { Text(stringResource(R.string.backup_confirm_import_title)) },
             text = {
                 Text(
-                    if (mergeMode)
-                        "Importing in MERGE mode: New habits and progress will be added to your current data without deleting anything."
-                    else
-                        "Importing in REPLACE mode: Colliding habits will be updated with the backup's data."
+                    if (mergeMode) stringResource(R.string.backup_import_merge_msg)
+                    else stringResource(R.string.backup_import_replace_msg)
                 )
             },
             confirmButton = {
@@ -299,12 +301,12 @@ fun AdvancedBackupScreen(
                     },
                     modifier = Modifier.testTag("confirm_import_button")
                 ) {
-                    Text("Import Now")
+                    Text(stringResource(R.string.btn_import_now))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { pendingJsonContent = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -312,6 +314,7 @@ fun AdvancedBackupScreen(
 
     // Export Preview Modal
     exportPreviewContent?.let { (title, content) ->
+        val strCopied = stringResource(R.string.copied_to_clipboard)
         AlertDialog(
             onDismissRequest = { exportPreviewContent = null },
             title = { Text(title) },
@@ -332,12 +335,12 @@ fun AdvancedBackupScreen(
                     onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         clipboard.setPrimaryClip(ClipData.newPlainText(title, content))
-                        Toast.makeText(context, "Copied to clipboard!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, strCopied, Toast.LENGTH_SHORT).show()
                         exportPreviewContent = null
                     },
                     modifier = Modifier.testTag("copy_export_button")
                 ) {
-                    Text("Copy")
+                    Text(stringResource(R.string.btn_copy))
                 }
             },
             dismissButton = {
@@ -347,11 +350,14 @@ fun AdvancedBackupScreen(
                             putExtra(Intent.EXTRA_TEXT, content)
                             type = "text/plain"
                         }
-                        context.startActivity(Intent.createChooser(sendIntent, "Share $title"))
+                        val chooser = Intent.createChooser(sendIntent, title).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(chooser)
                         exportPreviewContent = null
                     }
                 ) {
-                    Text("Share")
+                    Text(stringResource(R.string.btn_share))
                 }
             }
         )
@@ -361,9 +367,11 @@ fun AdvancedBackupScreen(
 @Composable
 private fun BackupFileItem(
     fileInfo: BackupFileInfo,
+    isArabic: Boolean,
     onRestore: () -> Unit
 ) {
-    val dateStr = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault()).format(Date(fileInfo.lastModified))
+    val locale = if (isArabic) Locale("ar") else Locale.ENGLISH
+    val dateStr = SimpleDateFormat("MMM d, yyyy HH:mm", locale).format(Date(fileInfo.lastModified))
     val sizeKb = (fileInfo.sizeBytes / 1024).coerceAtLeast(1)
 
     Card(
@@ -380,10 +388,10 @@ private fun BackupFileItem(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(fileInfo.name, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                Text("$dateStr • ${sizeKb} KB", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("$dateStr • $sizeKb ${if (isArabic) "ك.ب" else "KB"}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             TextButton(onClick = onRestore, modifier = Modifier.testTag("restore_file_${fileInfo.name}")) {
-                Text("Restore")
+                Text(stringResource(R.string.btn_restore))
             }
         }
     }
